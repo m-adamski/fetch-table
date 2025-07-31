@@ -4,18 +4,75 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-        <script src="../../dist/table.bundle.js"></script>
+        <script src="/dist/table.bundle.js"></script>
 
         <title>AJAX Table</title>
     </head>
     <body>
-        <div id="table"></div>
+        <div class="px-4 py-4 sm:px-6 lg:px-8">
+            <div class="sm:flex sm:items-center">
+                <div class="sm:flex-auto">
+                    <h1 class="text-base font-semibold text-gray-900">Users</h1>
+                    <p class="mt-2 text-sm text-gray-700">
+                        A list of all the users in your account, including their name, title, email and role.
+                    </p>
+                </div>
+            </div>
+            <div class="mt-8 flow-root">
+                <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+                    <div id="table" class="inline-block min-w-full py-2 align-middle text-sm sm:px-6 lg:px-8">
+                        Loading..
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <script>
             document.addEventListener("DOMContentLoaded", function () {
                 console.log("DOMContentLoaded");
 
-                const ajaxTable = new Table("#table", { ajaxURL: "/" });
+                const ajaxTable = new AjaxTable("#table", {
+                    ajaxURL: "/ajax-data",
+                    debug: true,
+                    columns: [
+                        {
+                            name: "firstName",
+                            type: "string",
+                            label: "First Name",
+                            className: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900",
+                            sortable: true,
+                            searchable: true,
+                            visible: true
+                        },
+                        {
+                            name: "lastName",
+                            type: "string",
+                            label: "Last Name",
+                            className: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900",
+                            sortable: true,
+                            searchable: true,
+                            visible: true
+                        },
+                        {
+                            name: "emailAddress",
+                            type: "string",
+                            label: "Email address",
+                            className: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900",
+                            sortable: true,
+                            searchable: true,
+                            visible: true
+                        },
+                    ],
+                    classNames: {
+                        table: {
+                            table: "min-w-full divide-y divide-gray-300",
+                            body: "divide-y divide-gray-200",
+                            placeholder: "text-center"
+                        }
+                    },
+                });
+
+                ajaxTable.on("data-refresh", (data) => console.log("Response data from index.html: ", data));
             });
         </script>
     </body>

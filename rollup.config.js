@@ -6,7 +6,7 @@ export default {
     output: {
         file: "dist/table.bundle.js",
         format: "iife",
-        name: "Table"
+        name: "AjaxTable"
     },
     plugins: [ typescript(), nodeResolve() ]
 };

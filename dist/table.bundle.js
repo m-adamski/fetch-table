@@ -1,4 +1,4 @@
-var Table = (function () {
+var AjaxTable = (function () {
     'use strict';
 
     /** A special constant with type `never` */
@@ -591,6 +591,7 @@ var Table = (function () {
         const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
         return new RegExp(`^${regex}$`);
     };
+    const boolean$1 = /true|false/i;
     // regex for string with no uppercase letters
     const lowercase = /^[^A-Z]*$/;
     // regex for string with no lowercase letters
@@ -1274,6 +1275,27 @@ var Table = (function () {
                 inst,
                 continue: !def.abort,
             });
+        };
+    });
+    const $ZodBoolean = /*@__PURE__*/ $constructor("$ZodBoolean", (inst, def) => {
+        $ZodType.init(inst, def);
+        inst._zod.pattern = boolean$1;
+        inst._zod.parse = (payload, _ctx) => {
+            if (def.coerce)
+                try {
+                    payload.value = Boolean(payload.value);
+                }
+                catch (_) { }
+            const input = payload.value;
+            if (typeof input === "boolean")
+                return payload;
+            payload.issues.push({
+                expected: "boolean",
+                code: "invalid_type",
+                input,
+                inst,
+            });
+            return payload;
         };
     });
     const $ZodUnknown = /*@__PURE__*/ $constructor("$ZodUnknown", (inst, def) => {
@@ -2177,6 +2199,12 @@ var Table = (function () {
             ...normalizeParams(params),
         });
     }
+    function _boolean(Class, params) {
+        return new Class({
+            type: "boolean",
+            ...normalizeParams(params),
+        });
+    }
     function _unknown(Class) {
         return new Class({
             type: "unknown",
@@ -2614,6 +2642,13 @@ var Table = (function () {
         $ZodJWT.init(inst, def);
         ZodStringFormat.init(inst, def);
     });
+    const ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
+        $ZodBoolean.init(inst, def);
+        ZodType.init(inst, def);
+    });
+    function boolean(params) {
+        return _boolean(ZodBoolean, params);
+    }
     const ZodUnknown = /*@__PURE__*/ $constructor("ZodUnknown", (inst, def) => {
         $ZodUnknown.init(inst, def);
         ZodType.init(inst, def);
@@ -2919,23 +2954,266 @@ var Table = (function () {
         return ch;
     }
 
-    var Table = /** @class */ (function () {
-        function Table(element, config) {
-            this.config = this.validateConfig(config);
-            this.coreElement = document.querySelector(element);
-            this.renderCore();
-        }
-        Table.prototype.validateConfig = function (config) {
-            return object({
-                "ajaxURL": string()
-            }).parse(config);
-        };
-        Table.prototype.renderCore = function () {
-            this.coreElement.innerHTML = "";
-        };
-        return Table;
-    }());
+    const columnSchema = object({
+        "name": string(),
+        "type": string(),
+        "label": string(),
+        "className": string().optional(),
+        "sortable": boolean(),
+        "searchable": boolean(),
+        "visible": boolean(),
+    });
 
-    return Table;
+    const configSchema = object({
+        "ajaxURL": string(),
+        "debug": boolean().optional().default(false),
+        "columns": array(columnSchema),
+        "classNames": object({
+            "table": object({
+                "table": string().optional(),
+                "body": string().optional(),
+                "placeholder": string().optional()
+            }).optional(),
+        }).optional(),
+        "placeholder": string().optional().default("No data available.."),
+        "pagination": object({
+            "enabled": boolean().optional().default(false),
+            "style": _enum(["standard", "simple"]).optional().default("standard"),
+        })
+    });
+
+    class EventDispatcher {
+        constructor() {
+            this._handlers = {};
+        }
+        /**
+         * Registers an event listener with a specified priority.
+         *
+         * @param event
+         * @param callback
+         * @param priority
+         */
+        register(event, callback, priority = 1000) {
+            if (!this._handlers[event]) {
+                this._handlers[event] = [];
+            }
+            this._handlers[event].push({ callback: callback, priority: priority });
+        }
+        /**
+         * Dispatches an event to all registered handlers for the given event name.
+         * Handlers are executed in the order of their priority.
+         *
+         * @param name
+         * @param data
+         */
+        dispatch(name, data) {
+            var _a;
+            (_a = this._handlers[name]) === null || _a === void 0 ? void 0 : _a.sort((a, b) => a.priority - b.priority).forEach(handler => {
+                handler.callback(data);
+            });
+        }
+    }
+
+    const responseSchema = object({
+        "data": array(array(object({
+            "column": string(),
+            "className": string().optional(),
+            "value": string()
+        }))),
+    });
+
+    class Client {
+        constructor(config, eventDispatcher) {
+            this._config = config;
+            this._eventDispatcher = eventDispatcher;
+        }
+        refresh(sort = null) {
+            if (this._config.debug)
+                console.info("Refreshing data..");
+            // Dispatch event
+            this._eventDispatcher.dispatch("before-data-refresh");
+            fetch(this._config.ajaxURL + "?" + (this.generateURLSearchParams(sort) || ""), {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-Requested-By": "ajax-table"
+                }
+            }).then(response => {
+                if (response.ok) {
+                    response.json().then(data => {
+                        const responseData = responseSchema.parse(data);
+                        // Dispatch event
+                        this._eventDispatcher.dispatch("data-refresh", responseData);
+                        this._eventDispatcher.dispatch("after-data-refresh");
+                    }).catch(error => {
+                        if (this._config.debug)
+                            console.error(error);
+                        this._eventDispatcher.dispatch("data-refresh-error", { error: error });
+                        this._eventDispatcher.dispatch("after-data-refresh");
+                    });
+                }
+            }).catch(error => {
+                if (this._config.debug)
+                    console.error(error);
+                this._eventDispatcher.dispatch("data-refresh-error", { error: error });
+                this._eventDispatcher.dispatch("after-data-refresh");
+            });
+        }
+        generateURLSearchParams(sort) {
+            if (sort !== null) {
+                return new URLSearchParams({
+                    "sort-column": sort.column.name,
+                    "sort-direction": sort.direction,
+                });
+            }
+            return null;
+        }
+    }
+
+    class TableComponent {
+        constructor(coreElement, config, eventDispatcher, client) {
+            this._isLoading = false;
+            this._sort = null;
+            this._elements = {
+                table: null,
+                head: null,
+                body: null
+            };
+            this._config = config;
+            this._coreElement = coreElement;
+            this._eventDispatcher = eventDispatcher;
+            this._client = client;
+            // Register event handlers
+            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
+            this._eventDispatcher.register("data-refresh", (data) => this.render(data));
+            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this.init();
+        }
+        init() {
+            var _a, _b, _c, _d;
+            this._coreElement.innerHTML = "";
+            // Create core elements
+            this._elements.table = document.createElement("table");
+            this._elements.head = document.createElement("thead");
+            this._elements.body = document.createElement("tbody");
+            this._elements.table.className = ((_b = (_a = this._config.classNames) === null || _a === void 0 ? void 0 : _a.table) === null || _b === void 0 ? void 0 : _b.table) || "";
+            this._elements.body.className = ((_d = (_c = this._config.classNames) === null || _c === void 0 ? void 0 : _c.table) === null || _d === void 0 ? void 0 : _d.body) || "";
+            // Create header cells
+            const columnRow = document.createElement("tr");
+            this._config.columns.forEach(column => {
+                const columnElement = document.createElement("th");
+                columnElement.innerText = column.label;
+                columnElement.className = column.className || "";
+                columnElement.setAttribute("scope", "col");
+                if (column.sortable) {
+                    columnElement.addEventListener("click", () => {
+                        if (!this._isLoading) {
+                            if (this._config.debug)
+                                console.info(`[Table Component] Sort by column: ${column.name}`);
+                            // Define sort object
+                            if (this._sort === null) {
+                                this._sort = { column: column, direction: "ASC" };
+                            }
+                            else {
+                                if (this._sort.column.name === column.name) {
+                                    this._sort.direction = this._sort.direction === "ASC" ? "DESC" : "ASC";
+                                }
+                                else {
+                                    this._sort = { column: column, direction: "ASC" };
+                                }
+                            }
+                            // Refresh
+                            this._client.refresh(this._sort);
+                        }
+                    });
+                }
+                columnRow.appendChild(columnElement);
+            });
+            this._elements.head.appendChild(columnRow);
+            this._elements.table.appendChild(this._elements.head);
+            this._elements.table.appendChild(this._elements.body);
+            this._coreElement.appendChild(this._elements.table);
+        }
+        render(data) {
+            var _a, _b, _c;
+            if (this._config.debug)
+                console.info("[Table Component] Rendering data..");
+            if (this._elements.body === null) {
+                throw new Error("[Table Component] Body element couldn't be found.");
+            }
+            this._elements.body.innerHTML = "";
+            if (data.data.length === 0 && this._config.placeholder !== undefined && this._config.placeholder !== null && this._config.placeholder !== "") {
+                const placeholderElement = document.createElement("tr");
+                const placeholderCellElement = document.createElement("td");
+                placeholderCellElement.innerText = this._config.placeholder;
+                placeholderCellElement.className = ((_b = (_a = this._config.classNames) === null || _a === void 0 ? void 0 : _a.table) === null || _b === void 0 ? void 0 : _b.placeholder) || "";
+                placeholderCellElement.setAttribute("colspan", `${this._config.columns.length}`);
+                placeholderElement.appendChild(placeholderCellElement);
+                (_c = this._elements.body) === null || _c === void 0 ? void 0 : _c.appendChild(placeholderElement);
+            }
+            else {
+                data.data.forEach(dataItem => {
+                    var _a;
+                    const rowElement = document.createElement("tr");
+                    this._config.columns.forEach(column => {
+                        const item = dataItem.find(function (item) {
+                            return item.column === column.name;
+                        });
+                        if (item === undefined) {
+                            throw new Error(`[Table Component] Column ${column.name} not found`);
+                        }
+                        const columnElement = document.createElement("td");
+                        columnElement.innerText = item.value;
+                        columnElement.className = item.className || "";
+                        rowElement.appendChild(columnElement);
+                    });
+                    (_a = this._elements.body) === null || _a === void 0 ? void 0 : _a.appendChild(rowElement);
+                });
+            }
+        }
+    }
+
+    class AjaxTable {
+        constructor(elementSelector, config) {
+            this._components = {
+                table: null,
+                pagination: null,
+            };
+            this._config = this.validateConfig(config);
+            this._coreElement = document.querySelector(elementSelector);
+            if (!this._coreElement) {
+                throw new Error("Container element couldn't be found.");
+            }
+            this._eventDispatcher = new EventDispatcher();
+            this._client = new Client(this._config, this._eventDispatcher);
+            // Register components
+            this._components.table = new TableComponent(this._coreElement, this._config, this._eventDispatcher, this._client);
+            this._client.refresh();
+        }
+        /**
+         * Shortcut for register an event listener for the specified event type.
+         *
+         * @param event
+         * @param callback
+         */
+        on(event, callback) {
+            this._eventDispatcher.register(event, callback, 1000);
+        }
+        /**
+         * Validates the provided configuration object against the defined schema.
+         *
+         * @param config
+         * @private
+         */
+        validateConfig(config) {
+            const configParse = configSchema.safeParse(config);
+            if (configParse.success) {
+                return configParse.data;
+            }
+            throw new Error(`Exception while config validation: ${configParse.error.message}`);
+        }
+    }
+
+    return AjaxTable;
 
 })();
