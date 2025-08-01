@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path"
+import fs from "fs";
 
 const app = express();
 const port = 3000;
@@ -11,340 +12,16 @@ app.get("/", (request, response) => {
 });
 
 app.get("/ajax-data", (request, response) => {
-    let data = [
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "John"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Doe"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "john.doe@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Jane"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Doe"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "jane.doe@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Michael"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Smith"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "michael.smith@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Emily"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Johnson"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "emily.johnson@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "William"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Brown"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "william.brown@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Sarah"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Davis"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "sarah.davis@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "James"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Wilson"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "james.wilson@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Emma"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Taylor"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "emma.taylor@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "David"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Anderson"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "david.anderson@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Olivia"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Martinez"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "olivia.martinez@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Daniel"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Thomas"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "daniel.thomas@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Sophia"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Garcia"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "sophia.garcia@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Joseph"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Rodriguez"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "joseph.rodriguez@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Isabella"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Lee"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "isabella.lee@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Alexander"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "White"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "alexander.white@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Mia"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Harris"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "mia.harris@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Christopher"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Clark"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "christopher.clark@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Ava"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Lewis"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "ava.lewis@example.com"
-            }
-        ],
-        [
-            {
-                column: "firstName",
-                className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
-                value: "Matthew"
-            },
-            {
-                column: "lastName",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "Walker"
-            },
-            {
-                column: "emailAddress",
-                className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500",
-                value: "matthew.walker@example.com"
-            }
-        ]
-    ];
+    const data = JSON.parse(fs.readFileSync("test/e2e/example.json", "utf8"));
     const requestQuery = request.query;
-
+    let responseData = data;
 
     if (requestQuery["sort-column"] !== undefined && requestQuery["sort-direction"] !== undefined) {
         let sortColumn = requestQuery["sort-column"];
         let sortDirection = requestQuery["sort-direction"];
 
         // Sort
-        data = data.sort((a, b) => {
+        responseData = responseData.sort((a, b) => {
             let aColumn = a.find(column => column.column === sortColumn);
             let bColumn = b.find(column => column.column === sortColumn);
 
@@ -368,11 +45,23 @@ app.get("/ajax-data", (request, response) => {
         });
     }
 
-    // setTimeout(() => {
+    if (requestQuery["pagination-page"] !== undefined && requestQuery["pagination-size"] !== undefined) {
+        let paginationPage = requestQuery["pagination-page"];
+        let paginationSize = requestQuery["pagination-size"];
+
+        responseData = responseData.slice((paginationPage - 1) * paginationSize, paginationPage * paginationSize);
+    }
+
     response.json({
-        "data": data
+        "total": data.length,
+        "total_filtered": data.length,
+        "pagination": {
+            "page": Number(requestQuery["pagination-page"]) || 1,
+            "page_size": Number(requestQuery["pagination-size"]) || 30,
+            "total_pages": Math.ceil(data.length / (requestQuery["pagination-size"] || 30)) || 1,
+        },
+        "data": responseData
     });
-    // }, 3000);
 });
 
 app.listen(port, () => {

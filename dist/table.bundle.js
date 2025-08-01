@@ -88,6 +88,14 @@ var AjaxTable = (function () {
         const end = source.endsWith("$") ? source.length - 1 : source.length;
         return source.slice(start, end);
     }
+    function floatSafeRemainder(val, step) {
+        const valDecCount = (val.toString().split(".")[1] || "").length;
+        const stepDecCount = (step.toString().split(".")[1] || "").length;
+        const decCount = valDecCount > stepDecCount ? valDecCount : stepDecCount;
+        const valInt = Number.parseInt(val.toFixed(decCount).replace(".", ""));
+        const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
+        return (valInt % stepInt) / 10 ** decCount;
+    }
     function defineLazy(object, key, getter) {
         Object.defineProperty(object, key, {
             get() {
@@ -193,6 +201,13 @@ var AjaxTable = (function () {
             return shape[k]._zod.optin === "optional" && shape[k]._zod.optout === "optional";
         });
     }
+    const NUMBER_FORMAT_RANGES = {
+        safeint: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+        int32: [-2147483648, 2147483647],
+        uint32: [0, 4294967295],
+        float32: [-34028234663852886e22, 3.4028234663852886e38],
+        float64: [-Number.MAX_VALUE, Number.MAX_VALUE],
+    };
     function pick(schema, mask) {
         const currDef = schema._zod.def;
         const def = mergeDefs(schema._zod.def, {
@@ -591,6 +606,8 @@ var AjaxTable = (function () {
         const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
         return new RegExp(`^${regex}$`);
     };
+    const integer = /^\d+$/;
+    const number$1 = /^-?\d+(?:\.\d+)?/i;
     const boolean$1 = /true|false/i;
     // regex for string with no uppercase letters
     const lowercase = /^[^A-Z]*$/;
@@ -603,6 +620,186 @@ var AjaxTable = (function () {
         inst._zod ?? (inst._zod = {});
         inst._zod.def = def;
         (_a = inst._zod).onattach ?? (_a.onattach = []);
+    });
+    const numericOriginMap = {
+        number: "number",
+        bigint: "bigint",
+        object: "date",
+    };
+    const $ZodCheckLessThan = /*@__PURE__*/ $constructor("$ZodCheckLessThan", (inst, def) => {
+        $ZodCheck.init(inst, def);
+        const origin = numericOriginMap[typeof def.value];
+        inst._zod.onattach.push((inst) => {
+            const bag = inst._zod.bag;
+            const curr = (def.inclusive ? bag.maximum : bag.exclusiveMaximum) ?? Number.POSITIVE_INFINITY;
+            if (def.value < curr) {
+                if (def.inclusive)
+                    bag.maximum = def.value;
+                else
+                    bag.exclusiveMaximum = def.value;
+            }
+        });
+        inst._zod.check = (payload) => {
+            if (def.inclusive ? payload.value <= def.value : payload.value < def.value) {
+                return;
+            }
+            payload.issues.push({
+                origin,
+                code: "too_big",
+                maximum: def.value,
+                input: payload.value,
+                inclusive: def.inclusive,
+                inst,
+                continue: !def.abort,
+            });
+        };
+    });
+    const $ZodCheckGreaterThan = /*@__PURE__*/ $constructor("$ZodCheckGreaterThan", (inst, def) => {
+        $ZodCheck.init(inst, def);
+        const origin = numericOriginMap[typeof def.value];
+        inst._zod.onattach.push((inst) => {
+            const bag = inst._zod.bag;
+            const curr = (def.inclusive ? bag.minimum : bag.exclusiveMinimum) ?? Number.NEGATIVE_INFINITY;
+            if (def.value > curr) {
+                if (def.inclusive)
+                    bag.minimum = def.value;
+                else
+                    bag.exclusiveMinimum = def.value;
+            }
+        });
+        inst._zod.check = (payload) => {
+            if (def.inclusive ? payload.value >= def.value : payload.value > def.value) {
+                return;
+            }
+            payload.issues.push({
+                origin,
+                code: "too_small",
+                minimum: def.value,
+                input: payload.value,
+                inclusive: def.inclusive,
+                inst,
+                continue: !def.abort,
+            });
+        };
+    });
+    const $ZodCheckMultipleOf = 
+    /*@__PURE__*/ $constructor("$ZodCheckMultipleOf", (inst, def) => {
+        $ZodCheck.init(inst, def);
+        inst._zod.onattach.push((inst) => {
+            var _a;
+            (_a = inst._zod.bag).multipleOf ?? (_a.multipleOf = def.value);
+        });
+        inst._zod.check = (payload) => {
+            if (typeof payload.value !== typeof def.value)
+                throw new Error("Cannot mix number and bigint in multiple_of check.");
+            const isMultiple = typeof payload.value === "bigint"
+                ? payload.value % def.value === BigInt(0)
+                : floatSafeRemainder(payload.value, def.value) === 0;
+            if (isMultiple)
+                return;
+            payload.issues.push({
+                origin: typeof payload.value,
+                code: "not_multiple_of",
+                divisor: def.value,
+                input: payload.value,
+                inst,
+                continue: !def.abort,
+            });
+        };
+    });
+    const $ZodCheckNumberFormat = /*@__PURE__*/ $constructor("$ZodCheckNumberFormat", (inst, def) => {
+        $ZodCheck.init(inst, def); // no format checks
+        def.format = def.format || "float64";
+        const isInt = def.format?.includes("int");
+        const origin = isInt ? "int" : "number";
+        const [minimum, maximum] = NUMBER_FORMAT_RANGES[def.format];
+        inst._zod.onattach.push((inst) => {
+            const bag = inst._zod.bag;
+            bag.format = def.format;
+            bag.minimum = minimum;
+            bag.maximum = maximum;
+            if (isInt)
+                bag.pattern = integer;
+        });
+        inst._zod.check = (payload) => {
+            const input = payload.value;
+            if (isInt) {
+                if (!Number.isInteger(input)) {
+                    // invalid_format issue
+                    // payload.issues.push({
+                    //   expected: def.format,
+                    //   format: def.format,
+                    //   code: "invalid_format",
+                    //   input,
+                    //   inst,
+                    // });
+                    // invalid_type issue
+                    payload.issues.push({
+                        expected: origin,
+                        format: def.format,
+                        code: "invalid_type",
+                        input,
+                        inst,
+                    });
+                    return;
+                    // not_multiple_of issue
+                    // payload.issues.push({
+                    //   code: "not_multiple_of",
+                    //   origin: "number",
+                    //   input,
+                    //   inst,
+                    //   divisor: 1,
+                    // });
+                }
+                if (!Number.isSafeInteger(input)) {
+                    if (input > 0) {
+                        // too_big
+                        payload.issues.push({
+                            input,
+                            code: "too_big",
+                            maximum: Number.MAX_SAFE_INTEGER,
+                            note: "Integers must be within the safe integer range.",
+                            inst,
+                            origin,
+                            continue: !def.abort,
+                        });
+                    }
+                    else {
+                        // too_small
+                        payload.issues.push({
+                            input,
+                            code: "too_small",
+                            minimum: Number.MIN_SAFE_INTEGER,
+                            note: "Integers must be within the safe integer range.",
+                            inst,
+                            origin,
+                            continue: !def.abort,
+                        });
+                    }
+                    return;
+                }
+            }
+            if (input < minimum) {
+                payload.issues.push({
+                    origin: "number",
+                    input,
+                    code: "too_small",
+                    minimum,
+                    inclusive: true,
+                    inst,
+                    continue: !def.abort,
+                });
+            }
+            if (input > maximum) {
+                payload.issues.push({
+                    origin: "number",
+                    input,
+                    code: "too_big",
+                    maximum,
+                    inst,
+                });
+            }
+        };
     });
     const $ZodCheckMaxLength = /*@__PURE__*/ $constructor("$ZodCheckMaxLength", (inst, def) => {
         var _a;
@@ -1276,6 +1473,40 @@ var AjaxTable = (function () {
                 continue: !def.abort,
             });
         };
+    });
+    const $ZodNumber = /*@__PURE__*/ $constructor("$ZodNumber", (inst, def) => {
+        $ZodType.init(inst, def);
+        inst._zod.pattern = inst._zod.bag.pattern ?? number$1;
+        inst._zod.parse = (payload, _ctx) => {
+            if (def.coerce)
+                try {
+                    payload.value = Number(payload.value);
+                }
+                catch (_) { }
+            const input = payload.value;
+            if (typeof input === "number" && !Number.isNaN(input) && Number.isFinite(input)) {
+                return payload;
+            }
+            const received = typeof input === "number"
+                ? Number.isNaN(input)
+                    ? "NaN"
+                    : !Number.isFinite(input)
+                        ? "Infinity"
+                        : undefined
+                : undefined;
+            payload.issues.push({
+                expected: "number",
+                code: "invalid_type",
+                input,
+                inst,
+                ...(received ? { received } : {}),
+            });
+            return payload;
+        };
+    });
+    const $ZodNumberFormat = /*@__PURE__*/ $constructor("$ZodNumber", (inst, def) => {
+        $ZodCheckNumberFormat.init(inst, def);
+        $ZodNumber.init(inst, def); // no format checksp
     });
     const $ZodBoolean = /*@__PURE__*/ $constructor("$ZodBoolean", (inst, def) => {
         $ZodType.init(inst, def);
@@ -2199,6 +2430,22 @@ var AjaxTable = (function () {
             ...normalizeParams(params),
         });
     }
+    function _number(Class, params) {
+        return new Class({
+            type: "number",
+            checks: [],
+            ...normalizeParams(params),
+        });
+    }
+    function _int(Class, params) {
+        return new Class({
+            type: "number",
+            check: "number_format",
+            abort: false,
+            format: "safeint",
+            ...normalizeParams(params),
+        });
+    }
     function _boolean(Class, params) {
         return new Class({
             type: "boolean",
@@ -2214,6 +2461,45 @@ var AjaxTable = (function () {
         return new Class({
             type: "never",
             ...normalizeParams(params),
+        });
+    }
+    function _lt(value, params) {
+        return new $ZodCheckLessThan({
+            check: "less_than",
+            ...normalizeParams(params),
+            value,
+            inclusive: false,
+        });
+    }
+    function _lte(value, params) {
+        return new $ZodCheckLessThan({
+            check: "less_than",
+            ...normalizeParams(params),
+            value,
+            inclusive: true,
+        });
+    }
+    function _gt(value, params) {
+        return new $ZodCheckGreaterThan({
+            check: "greater_than",
+            ...normalizeParams(params),
+            value,
+            inclusive: false,
+        });
+    }
+    function _gte(value, params) {
+        return new $ZodCheckGreaterThan({
+            check: "greater_than",
+            ...normalizeParams(params),
+            value,
+            inclusive: true,
+        });
+    }
+    function _multipleOf(value, params) {
+        return new $ZodCheckMultipleOf({
+            check: "multiple_of",
+            ...normalizeParams(params),
+            value,
         });
     }
     function _maxLength(maximum, params) {
@@ -2642,6 +2928,44 @@ var AjaxTable = (function () {
         $ZodJWT.init(inst, def);
         ZodStringFormat.init(inst, def);
     });
+    const ZodNumber = /*@__PURE__*/ $constructor("ZodNumber", (inst, def) => {
+        $ZodNumber.init(inst, def);
+        ZodType.init(inst, def);
+        inst.gt = (value, params) => inst.check(_gt(value, params));
+        inst.gte = (value, params) => inst.check(_gte(value, params));
+        inst.min = (value, params) => inst.check(_gte(value, params));
+        inst.lt = (value, params) => inst.check(_lt(value, params));
+        inst.lte = (value, params) => inst.check(_lte(value, params));
+        inst.max = (value, params) => inst.check(_lte(value, params));
+        inst.int = (params) => inst.check(int(params));
+        inst.safe = (params) => inst.check(int(params));
+        inst.positive = (params) => inst.check(_gt(0, params));
+        inst.nonnegative = (params) => inst.check(_gte(0, params));
+        inst.negative = (params) => inst.check(_lt(0, params));
+        inst.nonpositive = (params) => inst.check(_lte(0, params));
+        inst.multipleOf = (value, params) => inst.check(_multipleOf(value, params));
+        inst.step = (value, params) => inst.check(_multipleOf(value, params));
+        // inst.finite = (params) => inst.check(core.finite(params));
+        inst.finite = () => inst;
+        const bag = inst._zod.bag;
+        inst.minValue =
+            Math.max(bag.minimum ?? Number.NEGATIVE_INFINITY, bag.exclusiveMinimum ?? Number.NEGATIVE_INFINITY) ?? null;
+        inst.maxValue =
+            Math.min(bag.maximum ?? Number.POSITIVE_INFINITY, bag.exclusiveMaximum ?? Number.POSITIVE_INFINITY) ?? null;
+        inst.isInt = (bag.format ?? "").includes("int") || Number.isSafeInteger(bag.multipleOf ?? 0.5);
+        inst.isFinite = true;
+        inst.format = bag.format ?? null;
+    });
+    function number(params) {
+        return _number(ZodNumber, params);
+    }
+    const ZodNumberFormat = /*@__PURE__*/ $constructor("ZodNumberFormat", (inst, def) => {
+        $ZodNumberFormat.init(inst, def);
+        ZodNumber.init(inst, def);
+    });
+    function int(params) {
+        return _int(ZodNumberFormat, params);
+    }
     const ZodBoolean = /*@__PURE__*/ $constructor("ZodBoolean", (inst, def) => {
         $ZodBoolean.init(inst, def);
         ZodType.init(inst, def);
@@ -2969,18 +3293,66 @@ var AjaxTable = (function () {
         "debug": boolean().optional().default(false),
         "columns": array(columnSchema),
         "classNames": object({
+            "container": string().optional(),
             "table": object({
                 "table": string().optional(),
-                "body": string().optional(),
+                "head": object({
+                    "container": string().optional(),
+                    "row": string().optional(),
+                    "cell": string().optional(),
+                }),
+                "body": object({
+                    "container": string().optional(),
+                    "row": string().optional(),
+                    "cell": string().optional(),
+                }),
                 "placeholder": string().optional()
             }).optional(),
+            "footer": string().optional(),
+            "pagination": object({
+                "container": string().optional(),
+                "button": object({
+                    "base": string().optional(),
+                    "active": string().optional(),
+                    "ellipsis": string().optional(),
+                    "previous": string().optional(),
+                    "next": string().optional(),
+                }).optional(),
+                "sizeSelector": object({
+                    "container": string().optional(),
+                    "select": string().optional(),
+                    "option": string().optional(),
+                }).optional()
+            }).optional()
         }).optional(),
         "placeholder": string().optional().default("No data available.."),
         "pagination": object({
-            "enabled": boolean().optional().default(false),
+            "active": boolean().optional().default(false),
+            "pageSize": number().optional().default(20),
+            "availableSizes": array(number()).optional().default([10, 20, 30, 50, 100]),
             "style": _enum(["standard", "simple"]).optional().default("standard"),
-        })
+            "elements": object({
+                "previousButton": string().optional(),
+                "nextButton": string().optional(),
+                "ellipsis": string().optional(),
+            }).optional(),
+        }).optional()
     });
+
+    function createElement(tagName, options = {}) {
+        const element = document.createElement(tagName);
+        Object.entries(options).forEach(([key, value]) => {
+            if (value === undefined || value === null)
+                return;
+            if (key in element) {
+                element[key] = value;
+            }
+            else {
+                element.setAttribute(key, String(value));
+            }
+        });
+        return element;
+    }
 
     class EventDispatcher {
         constructor() {
@@ -3007,14 +3379,22 @@ var AjaxTable = (function () {
          * @param data
          */
         dispatch(name, data) {
-            var _a;
-            (_a = this._handlers[name]) === null || _a === void 0 ? void 0 : _a.sort((a, b) => a.priority - b.priority).forEach(handler => {
+            this._handlers[name]
+                ?.sort((a, b) => a.priority - b.priority)
+                .forEach(handler => {
                 handler.callback(data);
             });
         }
     }
 
     const responseSchema = object({
+        "total": number(),
+        "total_filtered": number(),
+        "pagination": object({
+            "page": number(),
+            "page_size": number(),
+            "total_pages": number(),
+        }),
         "data": array(array(object({
             "column": string(),
             "className": string().optional(),
@@ -3024,15 +3404,22 @@ var AjaxTable = (function () {
 
     class Client {
         constructor(config, eventDispatcher) {
+            this._sort = null;
+            this._pagination = null;
             this._config = config;
             this._eventDispatcher = eventDispatcher;
         }
-        refresh(sort = null) {
+        /**
+         * Refreshes data by triggering an AJAX request to the configured URL.
+         * Handles the data response and dispatches appropriate events in the process,
+         * including "before-data-refresh", "data-refresh", "after-data-refresh", and "data-refresh-error".
+         */
+        refresh() {
             if (this._config.debug)
                 console.info("Refreshing data..");
             // Dispatch event
             this._eventDispatcher.dispatch("before-data-refresh");
-            fetch(this._config.ajaxURL + "?" + (this.generateURLSearchParams(sort) || ""), {
+            fetch(this._config.ajaxURL + "?" + this.generateURLSearchParams(), {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
@@ -3059,19 +3446,52 @@ var AjaxTable = (function () {
                 this._eventDispatcher.dispatch("after-data-refresh");
             });
         }
-        generateURLSearchParams(sort) {
-            if (sort !== null) {
-                return new URLSearchParams({
-                    "sort-column": sort.column.name,
-                    "sort-direction": sort.direction,
-                });
+        get sort() {
+            return this._sort;
+        }
+        set sort(value) {
+            this._sort = value;
+        }
+        get pagination() {
+            return this._pagination;
+        }
+        set pagination(value) {
+            this._pagination = value;
+        }
+        /**
+         * Generates and returns URL search parameters based on the current pagination and sort settings.
+         *
+         * If pagination details are available, they are added as "pagination-page" and "pagination-size" parameters.
+         * If sorting details are specified, they are added as "sort-column" and "sort-direction" parameters.
+         *
+         * @return {URLSearchParams}
+         */
+        generateURLSearchParams() {
+            let params = new URLSearchParams();
+            if (this._pagination !== null) {
+                params.append("pagination-page", this._pagination.page.toString());
+                params.append("pagination-size", this._pagination.pageSize.toString());
             }
-            return null;
+            if (this._sort !== null) {
+                params.append("sort-column", this._sort.column.name);
+                params.append("sort-direction", this._sort.direction);
+            }
+            return params;
         }
     }
 
-    class TableComponent {
+    class Component {
         constructor(coreElement, config, eventDispatcher, client) {
+            this._config = config;
+            this._coreElement = coreElement;
+            this._eventDispatcher = eventDispatcher;
+            this._client = client;
+        }
+    }
+
+    class TableComponent extends Component {
+        constructor(coreElement, config, eventDispatcher, client) {
+            super(coreElement, config, eventDispatcher, client);
             this._isLoading = false;
             this._sort = null;
             this._elements = {
@@ -3079,32 +3499,38 @@ var AjaxTable = (function () {
                 head: null,
                 body: null
             };
-            this._config = config;
-            this._coreElement = coreElement;
-            this._eventDispatcher = eventDispatcher;
-            this._client = client;
             // Register event handlers
             this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
             this._eventDispatcher.register("data-refresh", (data) => this.render(data));
             this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
             this.init();
         }
+        /**
+         * Initializes the table component by creating and appending the table's core elements,
+         * including the table, header, and body, as well as setting up column headers and sorting behavior.
+         */
         init() {
-            var _a, _b, _c, _d;
             this._coreElement.innerHTML = "";
             // Create core elements
-            this._elements.table = document.createElement("table");
-            this._elements.head = document.createElement("thead");
-            this._elements.body = document.createElement("tbody");
-            this._elements.table.className = ((_b = (_a = this._config.classNames) === null || _a === void 0 ? void 0 : _a.table) === null || _b === void 0 ? void 0 : _b.table) || "";
-            this._elements.body.className = ((_d = (_c = this._config.classNames) === null || _c === void 0 ? void 0 : _c.table) === null || _d === void 0 ? void 0 : _d.body) || "";
+            this._elements.table = createElement("table", {
+                className: this._config.classNames?.table?.table
+            });
+            this._elements.head = createElement("thead", {
+                className: this._config.classNames?.table?.head.container
+            });
+            this._elements.body = createElement("tbody", {
+                className: this._config.classNames?.table?.body.container
+            });
             // Create header cells
-            const columnRow = document.createElement("tr");
+            const columnRowElement = createElement("tr", {
+                className: this._config.classNames?.table?.head.row
+            });
             this._config.columns.forEach(column => {
-                const columnElement = document.createElement("th");
-                columnElement.innerText = column.label;
-                columnElement.className = column.className || "";
-                columnElement.setAttribute("scope", "col");
+                const columnElement = createElement("th", {
+                    scope: "col",
+                    className: column.className || this._config.classNames?.table?.head.cell,
+                    innerText: column.label
+                });
                 if (column.sortable) {
                     columnElement.addEventListener("click", () => {
                         if (!this._isLoading) {
@@ -3123,38 +3549,50 @@ var AjaxTable = (function () {
                                 }
                             }
                             // Refresh
-                            this._client.refresh(this._sort);
+                            this._client.sort = this._sort;
+                            this._client.refresh();
                         }
                     });
                 }
-                columnRow.appendChild(columnElement);
+                columnRowElement.appendChild(columnElement);
             });
-            this._elements.head.appendChild(columnRow);
+            this._elements.head.appendChild(columnRowElement);
             this._elements.table.appendChild(this._elements.head);
             this._elements.table.appendChild(this._elements.body);
             this._coreElement.appendChild(this._elements.table);
         }
+        /**
+         * Renders the table data to the body element of the table component.
+         * Validates the required elements' presence and updates the DOM based on the provided data.
+         * Throws an error if the body element is not initialized or if column data is missing.
+         *
+         * @param data
+         * @private
+         */
         render(data) {
-            var _a, _b, _c;
             if (this._config.debug)
                 console.info("[Table Component] Rendering data..");
             if (this._elements.body === null) {
-                throw new Error("[Table Component] Body element couldn't be found.");
+                throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method.");
             }
             this._elements.body.innerHTML = "";
             if (data.data.length === 0 && this._config.placeholder !== undefined && this._config.placeholder !== null && this._config.placeholder !== "") {
-                const placeholderElement = document.createElement("tr");
-                const placeholderCellElement = document.createElement("td");
-                placeholderCellElement.innerText = this._config.placeholder;
-                placeholderCellElement.className = ((_b = (_a = this._config.classNames) === null || _a === void 0 ? void 0 : _a.table) === null || _b === void 0 ? void 0 : _b.placeholder) || "";
-                placeholderCellElement.setAttribute("colspan", `${this._config.columns.length}`);
+                const placeholderElement = createElement("tr", {
+                    className: this._config.classNames?.table?.body.row
+                });
+                const placeholderCellElement = createElement("td", {
+                    colSpan: this._config.columns.length,
+                    className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.body.cell,
+                    innerText: this._config.placeholder
+                });
                 placeholderElement.appendChild(placeholderCellElement);
-                (_c = this._elements.body) === null || _c === void 0 ? void 0 : _c.appendChild(placeholderElement);
+                this._elements.body?.appendChild(placeholderElement);
             }
             else {
                 data.data.forEach(dataItem => {
-                    var _a;
-                    const rowElement = document.createElement("tr");
+                    const rowElement = createElement("tr", {
+                        className: this._config.classNames?.table?.body.row
+                    });
                     this._config.columns.forEach(column => {
                         const item = dataItem.find(function (item) {
                             return item.column === column.name;
@@ -3162,14 +3600,162 @@ var AjaxTable = (function () {
                         if (item === undefined) {
                             throw new Error(`[Table Component] Column ${column.name} not found`);
                         }
-                        const columnElement = document.createElement("td");
-                        columnElement.innerText = item.value;
-                        columnElement.className = item.className || "";
+                        const columnElement = createElement("td", {
+                            className: item.className || this._config.classNames?.table?.body.cell,
+                            innerText: item.value
+                        });
                         rowElement.appendChild(columnElement);
                     });
-                    (_a = this._elements.body) === null || _a === void 0 ? void 0 : _a.appendChild(rowElement);
+                    this._elements.body?.appendChild(rowElement);
                 });
             }
+        }
+    }
+
+    class PaginationComponent extends Component {
+        constructor(coreElement, config, eventDispatcher, client) {
+            super(coreElement, config, eventDispatcher, client);
+            this._isLoading = false;
+            this._elements = {
+                container: null,
+                sizeContainer: null,
+                sizeSelect: null
+            };
+            // Register event handlers
+            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
+            this._eventDispatcher.register("data-refresh", (data) => this.render(data));
+            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this.init();
+        }
+        /**
+         * Initializes the pagination component by setting up its core container and clearing existing content.
+         * This method creates a navigation container element with the specified class name and ARIA label,
+         * then appends it to the core element of the component.
+         */
+        init() {
+            this._coreElement.innerHTML = "";
+            this._elements.container = createElement("nav", {
+                className: this._config.classNames?.pagination?.container,
+                ariaLabel: "Pagination"
+            });
+            this._elements.sizeContainer = createElement("div", {
+                className: this._config.classNames?.pagination?.sizeSelector?.container,
+            });
+            const sizeSelectElement = createElement("select", {
+                name: "at-size-selector",
+                className: this._config.classNames?.pagination?.sizeSelector?.select
+            });
+            this._config.pagination?.availableSizes?.forEach(size => {
+                const optionElement = createElement("option", {
+                    value: size,
+                    innerText: size.toString(),
+                    selected: size === this._client.pagination?.pageSize ? "selected" : null,
+                });
+                sizeSelectElement.appendChild(optionElement);
+            });
+            sizeSelectElement.addEventListener("change", () => {
+                if (!this._isLoading) {
+                    if (this._config.debug)
+                        console.info(`[Pagination Component] Changing page size to ${sizeSelectElement.value}`);
+                    this._client.pagination = { page: 1, pageSize: parseInt(sizeSelectElement.value) };
+                    this._client.refresh();
+                }
+            });
+            this._elements.sizeContainer.appendChild(sizeSelectElement);
+            this._coreElement.appendChild(this._elements.sizeContainer);
+            this._coreElement.appendChild(this._elements.container);
+        }
+        /**
+         * Renders the pagination controls and initializes event listeners for navigating between pages.
+         *
+         * @param data
+         * @private
+         */
+        render(data) {
+            if (this._elements.container === null) {
+                throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method.");
+            }
+            this._elements.container.innerText = "";
+            const previousButtonElement = createElement("button", {
+                className: this._config.classNames?.pagination?.button?.previous || this._config.classNames?.pagination?.button?.base,
+                innerHTML: this._config.pagination?.elements?.previousButton || "",
+                disabled: data.pagination.page === 1 ? "disabled" : null,
+                type: "button"
+            });
+            previousButtonElement.addEventListener("click", () => {
+                if (!this._isLoading) {
+                    if (data.pagination.page > 1) {
+                        if (this._config.debug)
+                            console.info(`[Pagination Component] Moving to previous page`);
+                        this._client.pagination = { page: data.pagination.page - 1, pageSize: data.pagination.page_size };
+                        this._client.refresh();
+                    }
+                }
+            });
+            const nextButtonElement = createElement("button", {
+                className: this._config.classNames?.pagination?.button?.next || this._config.classNames?.pagination?.button?.base,
+                innerHTML: this._config.pagination?.elements?.nextButton || "",
+                disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null,
+                type: "button"
+            });
+            nextButtonElement.addEventListener("click", () => {
+                if (!this._isLoading) {
+                    if (data.pagination.page < data.pagination.total_pages) {
+                        if (this._config.debug)
+                            console.info(`[Pagination Component] Moving to next page`);
+                        this._client.pagination = { page: data.pagination.page + 1, pageSize: data.pagination.page_size };
+                        this._client.refresh();
+                    }
+                }
+            });
+            // Create structure
+            this._elements.container?.appendChild(previousButtonElement);
+            if (this._config.pagination?.style !== "simple") {
+                const createButtonElement = (pageNum, isActive = false) => {
+                    const buttonElement = createElement("button", {
+                        className: isActive ? this._config.classNames?.pagination?.button?.active || this._config.classNames?.pagination?.button?.base : this._config.classNames?.pagination?.button?.base,
+                        innerText: pageNum.toString(),
+                        type: "button"
+                    });
+                    buttonElement.addEventListener("click", () => {
+                        if (!this._isLoading) {
+                            if (this._config.debug)
+                                console.info(`[Pagination Component] Moving to ${pageNum} page`);
+                            this._client.pagination = { page: pageNum, pageSize: data.pagination.page_size };
+                            this._client.refresh();
+                        }
+                    });
+                    return buttonElement;
+                };
+                const createEllipsisElement = () => {
+                    return createElement("span", {
+                        className: this._config.classNames?.pagination?.button?.ellipsis || this._config.classNames?.pagination?.button?.base,
+                        innerText: this._config.pagination?.elements?.ellipsis || "..."
+                    });
+                };
+                // Always show the first page button
+                const firstButtonElement = createButtonElement(1, 1 === data.pagination.page);
+                this._elements.container?.appendChild(firstButtonElement);
+                // Add ellipsis after the first page if needed
+                if (data.pagination.page > 4) {
+                    this._elements.container?.appendChild(createEllipsisElement());
+                }
+                // Show pages around the current page
+                for (let i = Math.max(2, data.pagination.page - 2); i <= Math.min(data.pagination.page + 2, data.pagination.total_pages - 1); i++) {
+                    const buttonElement = createButtonElement(i, i === data.pagination.page);
+                    this._elements.container?.appendChild(buttonElement);
+                }
+                // Add ellipsis before the last page if needed
+                if (data.pagination.page < data.pagination.total_pages - 3) {
+                    this._elements.container?.appendChild(createEllipsisElement());
+                }
+                // Show the last page button when there are more pages than 1
+                if (data.pagination.total_pages > 1) {
+                    const lastButton = createButtonElement(data.pagination.total_pages, data.pagination.total_pages === data.pagination.page);
+                    this._elements.container?.appendChild(lastButton);
+                }
+            }
+            this._elements.container?.appendChild(nextButtonElement);
         }
     }
 
@@ -3184,10 +3770,25 @@ var AjaxTable = (function () {
             if (!this._coreElement) {
                 throw new Error("Container element couldn't be found.");
             }
+            // Build core HTML structure
+            const containerElement = createElement("div", {
+                className: this._config.classNames?.container
+            });
+            const footerElement = createElement("div", {
+                className: this._config.classNames?.footer
+            });
+            this._coreElement.innerHTML = "";
+            this._coreElement.appendChild(containerElement);
+            this._coreElement.appendChild(footerElement);
+            // Define modules
             this._eventDispatcher = new EventDispatcher();
             this._client = new Client(this._config, this._eventDispatcher);
             // Register components
-            this._components.table = new TableComponent(this._coreElement, this._config, this._eventDispatcher, this._client);
+            this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
+            if (this._config.pagination?.active) {
+                this._client.pagination = { page: 1, pageSize: this._config.pagination.pageSize };
+                this._components.pagination = new PaginationComponent(footerElement, this._config, this._eventDispatcher, this._client);
+            }
             this._client.refresh();
         }
         /**

@@ -1,8 +1,10 @@
 import { configSchema, ConfigSchema } from "./schema/config";
 import { Component } from "./interfaces/component";
+import { createElement } from "./utils/create-element";
 import EventDispatcher from "./modules/event-dispatcher";
 import Client from "./modules/client";
 import TableComponent from "./components/table";
+import PaginationComponent from "./components/pagination";
 
 export default class AjaxTable {
     private readonly _config: ConfigSchema;
@@ -22,11 +24,29 @@ export default class AjaxTable {
             throw new Error("Container element couldn't be found.");
         }
 
+        // Build core HTML structure
+        const containerElement = createElement("div", {
+            className: this._config.classNames?.container
+        });
+        const footerElement = createElement("div", {
+            className: this._config.classNames?.footer
+        });
+
+        this._coreElement.innerHTML = "";
+        this._coreElement.appendChild(containerElement);
+        this._coreElement.appendChild(footerElement);
+
+        // Define modules
         this._eventDispatcher = new EventDispatcher();
         this._client = new Client(this._config, this._eventDispatcher);
 
         // Register components
-        this._components.table = new TableComponent(this._coreElement, this._config, this._eventDispatcher, this._client);
+        this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
+
+        if (this._config.pagination?.active) {
+            this._client.pagination = { page: 1, pageSize: this._config.pagination.pageSize };
+            this._components.pagination = new PaginationComponent(footerElement, this._config, this._eventDispatcher, this._client);
+        }
 
         this._client.refresh();
     }

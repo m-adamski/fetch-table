@@ -1,16 +1,12 @@
-import { Component } from "../interfaces/component";
+import Component from "./component";
 import { ConfigSchema } from "../schema/config";
 import { ResponseSchema } from "../schema/response";
 import { ColumnSchema } from "../schema/column";
+import { createElement } from "../utils/create-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
-export default class TableComponent implements Component {
-    private readonly _config: ConfigSchema;
-    private readonly _coreElement: HTMLElement;
-    private readonly _eventDispatcher: EventDispatcher;
-    private readonly _client: Client;
-
+export default class TableComponent extends Component {
     private _isLoading: boolean = false;
     private _sort: { column: ColumnSchema, direction: "ASC" | "DESC" } | null = null;
     private _elements: { table: HTMLElement | null, head: HTMLElement | null, body: HTMLElement | null } = {
@@ -19,11 +15,8 @@ export default class TableComponent implements Component {
         body: null
     }
 
-    public constructor(coreElement: HTMLElement, config: ConfigSchema, eventDispatcher: EventDispatcher, client: Client) {
-        this._config = config;
-        this._coreElement = coreElement;
-        this._eventDispatcher = eventDispatcher;
-        this._client = client;
+    constructor(coreElement: HTMLElement, config: ConfigSchema, eventDispatcher: EventDispatcher, client: Client) {
+        super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
         this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
@@ -33,24 +26,37 @@ export default class TableComponent implements Component {
         this.init();
     }
 
+    /**
+     * Initializes the table component by creating and appending the table's core elements,
+     * including the table, header, and body, as well as setting up column headers and sorting behavior.
+     */
     private init(): void {
         this._coreElement.innerHTML = "";
 
         // Create core elements
-        this._elements.table = document.createElement("table");
-        this._elements.head = document.createElement("thead");
-        this._elements.body = document.createElement("tbody");
+        this._elements.table = createElement("table", {
+            className: this._config.classNames?.table?.table
+        });
 
-        this._elements.table.className = this._config.classNames?.table?.table || "";
-        this._elements.body.className = this._config.classNames?.table?.body || "";
+        this._elements.head = createElement("thead", {
+            className: this._config.classNames?.table?.head.container
+        });
+
+        this._elements.body = createElement("tbody", {
+            className: this._config.classNames?.table?.body.container
+        });
 
         // Create header cells
-        const columnRow = document.createElement("tr");
+        const columnRowElement = createElement("tr", {
+            className: this._config.classNames?.table?.head.row
+        });
+
         this._config.columns.forEach(column => {
-            const columnElement = document.createElement("th");
-            columnElement.innerText = column.label;
-            columnElement.className = column.className || "";
-            columnElement.setAttribute("scope", "col");
+            const columnElement = createElement("th", {
+                scope: "col",
+                className: column.className || this._config.classNames?.table?.head.cell,
+                innerText: column.label
+            });
 
             if (column.sortable) {
                 columnElement.addEventListener("click", () => {
@@ -69,43 +75,58 @@ export default class TableComponent implements Component {
                         }
 
                         // Refresh
-                        this._client.refresh(this._sort);
+                        this._client.sort = this._sort;
+                        this._client.refresh();
                     }
                 });
             }
 
-            columnRow.appendChild(columnElement);
+            columnRowElement.appendChild(columnElement);
         });
 
-        this._elements.head.appendChild(columnRow);
+        this._elements.head.appendChild(columnRowElement);
         this._elements.table.appendChild(this._elements.head);
         this._elements.table.appendChild(this._elements.body);
 
         this._coreElement.appendChild(this._elements.table);
     }
 
+    /**
+     * Renders the table data to the body element of the table component.
+     * Validates the required elements' presence and updates the DOM based on the provided data.
+     * Throws an error if the body element is not initialized or if column data is missing.
+     *
+     * @param data
+     * @private
+     */
     private render(data: ResponseSchema): void {
         if (this._config.debug) console.info("[Table Component] Rendering data..");
 
         if (this._elements.body === null) {
-            throw new Error("[Table Component] Body element couldn't be found.")
+            throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method.")
         }
 
         this._elements.body.innerHTML = "";
 
         if (data.data.length === 0 && this._config.placeholder !== undefined && this._config.placeholder !== null && this._config.placeholder !== "") {
-            const placeholderElement = document.createElement("tr");
-            const placeholderCellElement = document.createElement("td");
-            placeholderCellElement.innerText = this._config.placeholder;
-            placeholderCellElement.className = this._config.classNames?.table?.placeholder || "";
-            placeholderCellElement.setAttribute("colspan", `${ this._config.columns.length }`);
+            const placeholderElement = createElement("tr", {
+                className: this._config.classNames?.table?.body.row
+            });
+
+            const placeholderCellElement = createElement("td", {
+                colSpan: this._config.columns.length,
+                className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.body.cell,
+                innerText: this._config.placeholder
+            })
 
             placeholderElement.appendChild(placeholderCellElement);
             this._elements.body?.appendChild(placeholderElement);
         } else {
 
             data.data.forEach(dataItem => {
-                const rowElement = document.createElement("tr");
+                const rowElement = createElement("tr", {
+                    className: this._config.classNames?.table?.body.row
+                });
 
                 this._config.columns.forEach(column => {
                     const item = dataItem.find(function (item) {
@@ -116,9 +137,10 @@ export default class TableComponent implements Component {
                         throw new Error(`[Table Component] Column ${ column.name } not found`);
                     }
 
-                    const columnElement = document.createElement("td");
-                    columnElement.innerText = item.value;
-                    columnElement.className = item.className || "";
+                    const columnElement = createElement("td", {
+                        className: item.className || this._config.classNames?.table?.body.cell,
+                        innerText: item.value
+                    });
 
                     rowElement.appendChild(columnElement);
                 });
