@@ -29,7 +29,7 @@ export default class AjaxTable {
             className: this._config.classNames?.container
         });
         const footerElement = createElement("div", {
-            className: this._config.classNames?.footer
+            className: this._config.classNames?.footerContainer
         });
 
         this._coreElement.innerHTML = "";
@@ -43,12 +43,12 @@ export default class AjaxTable {
         // Register components
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
 
-        if (this._config.pagination?.active) {
+        if (this._config.pagination?.active === true) {
             this._client.pagination = { page: 1, pageSize: this._config.pagination.pageSize };
             this._components.pagination = new PaginationComponent(footerElement, this._config, this._eventDispatcher, this._client);
         }
 
-        this._client.refresh();
+        // this._client.refresh();
     }
 
     /**
@@ -59,6 +59,13 @@ export default class AjaxTable {
      */
     on(event: string, callback: (data?: any) => void): void {
         this._eventDispatcher.register(event, callback, 1000);
+    }
+
+    /**
+     * Refreshes the data displayed in the table component.
+     */
+    refreshData(): void {
+        this._client.refresh();
     }
 
     /**

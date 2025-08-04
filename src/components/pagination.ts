@@ -89,7 +89,7 @@ export default class PaginationComponent extends Component {
 
         const previousButtonElement = createElement("button", {
             className: this._config.classNames?.pagination?.button?.previous || this._config.classNames?.pagination?.button?.base,
-            innerHTML: this._config.pagination?.elements?.previousButton || "",
+            innerHTML: this._config.pagination?.elements?.previousButtonHTML || "",
             disabled: data.pagination.page === 1 ? "disabled" : null,
             type: "button"
         });
@@ -99,6 +99,7 @@ export default class PaginationComponent extends Component {
                 if (data.pagination.page > 1) {
                     if (this._config.debug) console.info(`[Pagination Component] Moving to previous page`);
 
+                    // Update client and refresh data
                     this._client.pagination = { page: data.pagination.page - 1, pageSize: data.pagination.page_size };
                     this._client.refresh();
                 }
@@ -107,7 +108,7 @@ export default class PaginationComponent extends Component {
 
         const nextButtonElement = createElement("button", {
             className: this._config.classNames?.pagination?.button?.next || this._config.classNames?.pagination?.button?.base,
-            innerHTML: this._config.pagination?.elements?.nextButton || "",
+            innerHTML: this._config.pagination?.elements?.nextButtonHTML || "",
             disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null,
             type: "button"
         });
@@ -117,6 +118,7 @@ export default class PaginationComponent extends Component {
                 if (data.pagination.page < data.pagination.total_pages) {
                     if (this._config.debug) console.info(`[Pagination Component] Moving to next page`);
 
+                    // Update client and refresh data
                     this._client.pagination = { page: data.pagination.page + 1, pageSize: data.pagination.page_size };
                     this._client.refresh();
                 }
@@ -127,18 +129,26 @@ export default class PaginationComponent extends Component {
         this._elements.container?.appendChild(previousButtonElement);
 
         if (this._config.pagination?.style !== "simple") {
-            const createButtonElement = (pageNum: number, isActive: boolean = false) => {
+
+            /**
+             * Internal function to create a button element with the specified page number and active state.
+             *
+             * @param pageNumber
+             * @param isActive
+             */
+            const createButtonElement = (pageNumber: number, isActive: boolean = false) => {
                 const buttonElement = createElement("button", {
                     className: isActive ? this._config.classNames?.pagination?.button?.active || this._config.classNames?.pagination?.button?.base : this._config.classNames?.pagination?.button?.base,
-                    innerText: pageNum.toString(),
+                    innerText: pageNumber.toString(),
                     type: "button"
                 });
 
                 buttonElement.addEventListener("click", () => {
                     if (!this._isLoading) {
-                        if (this._config.debug) console.info(`[Pagination Component] Moving to ${ pageNum } page`);
+                        if (this._config.debug) console.info(`[Pagination Component] Moving to ${ pageNumber } page`);
 
-                        this._client.pagination = { page: pageNum, pageSize: data.pagination.page_size };
+                        // Update client and refresh data
+                        this._client.pagination = { page: pageNumber, pageSize: data.pagination.page_size };
                         this._client.refresh();
                     }
                 });
@@ -146,10 +156,13 @@ export default class PaginationComponent extends Component {
                 return buttonElement;
             }
 
+            /**
+             * Internal function to create an ellipsis element with the specified class name and HTML content.
+             */
             const createEllipsisElement = () => {
                 return createElement("span", {
                     className: this._config.classNames?.pagination?.button?.ellipsis || this._config.classNames?.pagination?.button?.base,
-                    innerText: this._config.pagination?.elements?.ellipsis || "..."
+                    innerHTML: this._config.pagination?.elements?.ellipsisHTML || "..."
                 });
             }
 

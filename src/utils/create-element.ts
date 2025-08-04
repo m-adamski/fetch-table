@@ -2,6 +2,7 @@ type ElementAttributes = Partial<HTMLElement>;
 
 // Inspired by TS Dom Utils
 // https://github.com/rafaucau/ts-dom-utils/tree/main
+
 interface CreateElementOptions<K extends keyof HTMLElementTagNameMap> {
     [key: string]: any;
 }

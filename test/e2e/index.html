@@ -37,50 +37,42 @@
                     columns: [
                         {
                             name: "firstName",
-                            type: "string",
+                            type: "text",
                             label: "First Name",
                             sortable: true,
-                            searchable: true,
-                            visible: true
                         },
                         {
                             name: "lastName",
-                            type: "string",
+                            type: "text",
                             label: "Last Name",
                             sortable: true,
-                            searchable: true,
-                            visible: true
                         },
                         {
                             name: "type",
-                            type: "string",
+                            type: "text",
                             label: "Account type",
                             sortable: true,
-                            searchable: true,
-                            visible: true
                         },
                         {
                             name: "emailAddress",
-                            type: "string",
+                            type: "text",
                             label: "Email address",
                             sortable: true,
-                            searchable: true,
-                            visible: true
                         },
                     ],
                     classNames: {
                         table: {
                             table: "relative min-w-full divide-y divide-gray-300",
-                            head: {
-                                cell: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                            tableHead: {
+                                tableCell: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                             },
-                            body: {
-                                container: "divide-y divide-gray-200",
-                                cell: "px-3 py-4 text-sm whitespace-nowrap text-gray-500"
+                            tableBody: {
+                                tableBody: "divide-y divide-gray-200",
+                                tableCell: "px-3 py-4 text-sm whitespace-nowrap text-gray-500"
                             },
                             placeholder: "text-center"
                         },
-                        footer: "flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6",
+                        footerContainer: "flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6",
                         pagination: {
                             container: "isolate inline-flex -space-x-px rounded-md",
                             button: {
@@ -95,15 +87,22 @@
                     },
                     pagination: {
                         active: true,
-                        pageSize: 20,
+                        pageSize: 10,
                         elements: {
-                            previousButton: "Previous",
-                            nextButton: "Next",
+                            previousButtonHTML: "Previous",
+                            nextButtonHTML: "Next",
                         }
                     },
                 });
 
+                ajaxTable.on("before-data-refresh", (request) => {
+                    request.headers.append("X-Custom-Header", "Custom header value");
+                });
+
                 ajaxTable.on("data-refresh", (data) => console.log("Response data from index.html: ", data));
+
+                // Initial data refresh
+                ajaxTable.refreshData();
             });
         </script>
     </body>

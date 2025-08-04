@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 
 export const responseSchema = z.object({
     "total": z.number(),
@@ -12,7 +12,7 @@ export const responseSchema = z.object({
         z.array(
             z.object({
                 "column": z.string(),
-                "className": z.string().optional(),
+                "className": z.optional(z.string()),
                 "value": z.string()
             })
         )

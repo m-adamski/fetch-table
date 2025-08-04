@@ -1,13 +1,11 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 
 export const columnSchema = z.object({
     "name": z.string(),
-    "type": z.string(),
+    "type": z.enum(["text", "html"]),
     "label": z.string(),
-    "className": z.string().optional(),
+    "className": z.optional(z.string()),
     "sortable": z.boolean(),
-    "searchable": z.boolean(),
-    "visible": z.boolean(),
 });
 
 export type ColumnSchema = z.infer<typeof columnSchema>;

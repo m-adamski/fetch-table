@@ -39,23 +39,23 @@ export default class TableComponent extends Component {
         });
 
         this._elements.head = createElement("thead", {
-            className: this._config.classNames?.table?.head.container
+            className: this._config.classNames?.table?.tableHead.tableHead
         });
 
         this._elements.body = createElement("tbody", {
-            className: this._config.classNames?.table?.body.container
+            className: this._config.classNames?.table?.tableBody.tableBody
         });
 
         // Create header cells
         const columnRowElement = createElement("tr", {
-            className: this._config.classNames?.table?.head.row
+            className: this._config.classNames?.table?.tableHead.tableRow
         });
 
         this._config.columns.forEach(column => {
             const columnElement = createElement("th", {
                 scope: "col",
-                className: column.className || this._config.classNames?.table?.head.cell,
-                innerText: column.label
+                className: column.className || this._config.classNames?.table?.tableHead.tableCell,
+                innerHTML: column.label
             });
 
             if (column.sortable) {
@@ -74,7 +74,7 @@ export default class TableComponent extends Component {
                             }
                         }
 
-                        // Refresh
+                        // Update client and refresh data
                         this._client.sort = this._sort;
                         this._client.refresh();
                     }
@@ -108,24 +108,24 @@ export default class TableComponent extends Component {
 
         this._elements.body.innerHTML = "";
 
-        if (data.data.length === 0 && this._config.placeholder !== undefined && this._config.placeholder !== null && this._config.placeholder !== "") {
+        // Check if data is empty and show the placeholder if needed
+        if (data.data.length === 0 && this._config.placeholderHTML !== undefined && this._config.placeholderHTML !== null && this._config.placeholderHTML !== "") {
             const placeholderElement = createElement("tr", {
-                className: this._config.classNames?.table?.body.row
+                className: this._config.classNames?.table?.tableBody.tableCell
             });
 
             const placeholderCellElement = createElement("td", {
                 colSpan: this._config.columns.length,
-                className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.body.cell,
-                innerText: this._config.placeholder
+                className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.tableBody.tableCell,
+                innerHTML: this._config.placeholderHTML
             })
 
             placeholderElement.appendChild(placeholderCellElement);
             this._elements.body?.appendChild(placeholderElement);
         } else {
-
             data.data.forEach(dataItem => {
                 const rowElement = createElement("tr", {
-                    className: this._config.classNames?.table?.body.row
+                    className: this._config.classNames?.table?.tableBody.tableRow
                 });
 
                 this._config.columns.forEach(column => {
@@ -138,9 +138,15 @@ export default class TableComponent extends Component {
                     }
 
                     const columnElement = createElement("td", {
-                        className: item.className || this._config.classNames?.table?.body.cell,
-                        innerText: item.value
+                        className: item.className || this._config.classNames?.table?.tableBody.tableCell,
                     });
+
+                    // Set cell content based on the column type
+                    if (column.type === "text") {
+                        columnElement.innerText = item.value;
+                    } else if (column.type === "html") {
+                        columnElement.innerHTML = item.value;
+                    }
 
                     rowElement.appendChild(columnElement);
                 });

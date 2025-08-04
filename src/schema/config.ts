@@ -1,55 +1,60 @@
-import { z } from "zod";
+import { z } from "zod/mini";
 import { columnSchema } from "./column";
 
 export const configSchema = z.object({
     "ajaxURL": z.string(),
-    "debug": z.boolean().optional().default(false),
+    "ajaxMethod": z._default(z.enum(["GET", "POST"]), "GET"),
+    "ajaxHeaders": z._default(z.record(z.string(), z.string()), {
+        "Content-Type": "application/json",
+        "X-Requested-By": "ajax-table"
+    }),
+    "debug": z._default(z.boolean(), false),
     "columns": z.array(columnSchema),
-    "classNames": z.object({
-        "container": z.string().optional(),
-        "table": z.object({
-            "table": z.string().optional(),
-            "head": z.object({
-                "container": z.string().optional(),
-                "row": z.string().optional(),
-                "cell": z.string().optional(),
+    "classNames": z.optional(z.object({
+        "container": z.optional(z.string()),
+        "table": z.optional(z.object({
+            "table": z.optional(z.string()),
+            "tableHead": z.object({
+                "tableHead": z.optional(z.string()),
+                "tableRow": z.optional(z.string()),
+                "tableCell": z.optional(z.string()),
             }),
-            "body": z.object({
-                "container": z.string().optional(),
-                "row": z.string().optional(),
-                "cell": z.string().optional(),
+            "tableBody": z.object({
+                "tableBody": z.optional(z.string()),
+                "tableRow": z.optional(z.string()),
+                "tableCell": z.optional(z.string()),
             }),
-            "placeholder": z.string().optional()
-        }).optional(),
-        "footer": z.string().optional(),
-        "pagination": z.object({
-            "container": z.string().optional(),
-            "button": z.object({
-                "base": z.string().optional(),
-                "active": z.string().optional(),
-                "ellipsis": z.string().optional(),
-                "previous": z.string().optional(),
-                "next": z.string().optional(),
-            }).optional(),
+            "placeholder": z.optional(z.string())
+        })),
+        "footerContainer": z.optional(z.string()),
+        "pagination": z.optional(z.object({
+            "container": z.optional(z.string()),
+            "button": z.optional(z.object({
+                "base": z.optional(z.string()),
+                "active": z.optional(z.string()),
+                "ellipsis": z.optional(z.string()),
+                "previous": z.optional(z.string()),
+                "next": z.optional(z.string()),
+            })),
             "sizeSelector": z.object({
-                "container": z.string().optional(),
-                "select": z.string().optional(),
-                "option": z.string().optional(),
-            }).optional()
-        }).optional()
-    }).optional(),
-    "placeholder": z.string().optional().default("No data available.."),
-    "pagination": z.object({
-        "active": z.boolean().optional().default(false),
-        "pageSize": z.number().optional().default(20),
-        "availableSizes": z.array(z.number()).optional().default([10, 20, 30, 50, 100]),
-        "style": z.enum(["standard", "simple"]).optional().default("standard"),
-        "elements": z.object({
-            "previousButton": z.string().optional(),
-            "nextButton": z.string().optional(),
-            "ellipsis": z.string().optional(),
-        }).optional(),
-    }).optional()
+                "container": z.optional(z.string()),
+                "select": z.optional(z.string()),
+                "option": z.optional(z.string()),
+            }),
+        })),
+    })),
+    "placeholderHTML": z._default(z.string(), "No data available.."),
+    "pagination": z.optional(z.object({
+        "active": z._default(z.boolean(), false),
+        "pageSize": z._default(z.number(), 30),
+        "availableSizes": z._default(z.array(z.number()), [10, 30, 50, 100]),
+        "style": z._default(z.enum(["standard", "simple"]), "standard"),
+        "elements": z.optional(z.object({
+            "previousButtonHTML": z.optional(z.string()),
+            "nextButtonHTML": z.optional(z.string()),
+            "ellipsisHTML": z.optional(z.string()),
+        })),
+    }))
 });
 
 export type ConfigSchema = z.infer<typeof configSchema>;
