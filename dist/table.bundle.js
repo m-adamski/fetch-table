@@ -1030,6 +1030,7 @@ var AjaxTable = (function () {
         "label": string(),
         "className": optional(string()),
         "sortable": boolean(),
+        "searchable": boolean(),
     });
 
     const configSchema = object({
@@ -1041,51 +1042,127 @@ var AjaxTable = (function () {
         }),
         "debug": _default(boolean(), false),
         "columns": array(columnSchema),
-        "classNames": optional(object({
-            "container": optional(string()),
-            "table": optional(object({
-                "table": optional(string()),
-                "tableHead": object({
-                    "tableHead": optional(string()),
-                    "tableRow": optional(string()),
-                    "tableCell": optional(string()),
-                }),
-                "tableBody": object({
-                    "tableBody": optional(string()),
-                    "tableRow": optional(string()),
-                    "tableCell": optional(string()),
-                }),
-                "placeholder": optional(string())
-            })),
-            "footerContainer": optional(string()),
-            "pagination": optional(object({
-                "container": optional(string()),
-                "button": optional(object({
-                    "base": optional(string()),
-                    "active": optional(string()),
-                    "ellipsis": optional(string()),
-                    "previous": optional(string()),
-                    "next": optional(string()),
+        "elements": optional(object({
+            "container": optional(object({
+                "container": optional(object({
+                    "className": optional(string()),
+                    "querySelector": optional(string()),
+                    "attributes": optional(record(string(), string())),
                 })),
-                "sizeSelector": object({
-                    "container": optional(string()),
-                    "select": optional(string()),
-                    "option": optional(string()),
-                }),
+                "header": optional(object({
+                    "className": optional(string()),
+                    "querySelector": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "footer": optional(object({
+                    "className": optional(string()),
+                    "querySelector": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+            })),
+            "table": optional(object({
+                "table": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "tableHead": optional(object({
+                    "tableHead": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "tableRow": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "tableCell": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    }))
+                })),
+                "tableBody": optional(object({
+                    "tableBody": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "tableRow": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "tableCell": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    }))
+                })),
+                "placeholder": optional(object({
+                    "className": optional(string()),
+                    "innerHTML": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                }))
+            })),
+            "pagination": optional(object({
+                "container": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "button": optional(object({
+                    "primary": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "active": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "ellipsis": optional(object({
+                        "className": optional(string()),
+                        "innerHTML": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "previous": optional(object({
+                        "className": optional(string()),
+                        "innerHTML": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "next": optional(object({
+                        "className": optional(string()),
+                        "innerHTML": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                })),
+                "sizeSelector": optional(object({
+                    "container": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "select": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "option": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    }))
+                }))
+            })),
+            "search": optional(object({
+                "container": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "input": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                }))
             })),
         })),
-        "placeholderHTML": _default(string(), "No data available.."),
-        "pagination": optional(object({
-            "active": _default(boolean(), false),
-            "pageSize": _default(number(), 30),
-            "availableSizes": _default(array(number()), [10, 30, 50, 100]),
-            "style": _default(_enum(["standard", "simple"]), "standard"),
-            "elements": optional(object({
-                "previousButtonHTML": optional(string()),
-                "nextButtonHTML": optional(string()),
-                "ellipsisHTML": optional(string()),
-            })),
-        }))
+        "components": optional(object({
+            "pagination": optional(object({
+                "active": _default(boolean(), false),
+                "pageSize": _default(number(), 25),
+                "availableSizes": _default(array(number()), [10, 25, 50, 100]),
+                "style": _default(_enum(["standard", "simple"]), "standard"),
+            }))
+        })),
     });
 
     function createElement(tagName, options = {}) {
@@ -1093,7 +1170,12 @@ var AjaxTable = (function () {
         Object.entries(options).forEach(([key, value]) => {
             if (value === undefined || value === null)
                 return;
-            if (key in element) {
+            if (key === "attributes") {
+                Object.entries(value).forEach(([attrKey, attrValue]) => {
+                    element.setAttribute(attrKey, String(attrValue));
+                });
+            }
+            else if (key in element) {
                 element[key] = value;
             }
             else {
@@ -1155,6 +1237,7 @@ var AjaxTable = (function () {
         constructor(config, eventDispatcher) {
             this._sort = null;
             this._pagination = null;
+            this._search = null;
             this._config = config;
             this._eventDispatcher = eventDispatcher;
         }
@@ -1203,6 +1286,12 @@ var AjaxTable = (function () {
         set pagination(value) {
             this._pagination = value;
         }
+        get search() {
+            return this._search;
+        }
+        set search(value) {
+            this._search = value;
+        }
         /**
          * Generates and returns a new Request object based on the current configuration.
          *
@@ -1232,8 +1321,9 @@ var AjaxTable = (function () {
          */
         generateRequestBody() {
             return {
-                pagination: this._pagination,
-                sort: this._sort
+                sort: this._sort,
+                search: this._search,
+                pagination: this._pagination
             };
         }
         /**
@@ -1246,6 +1336,9 @@ var AjaxTable = (function () {
          */
         generateURLSearchParams() {
             let params = new URLSearchParams();
+            if (this._search !== null) {
+                params.append("search", this._search);
+            }
             if (this._pagination !== null) {
                 params.append("pagination-page", this._pagination.page.toString());
                 params.append("pagination-size", this._pagination.pageSize.toString());
@@ -1291,22 +1384,27 @@ var AjaxTable = (function () {
             this._coreElement.innerHTML = "";
             // Create core elements
             this._elements.table = createElement("table", {
-                className: this._config.classNames?.table?.table
+                className: this._config.elements?.table?.table?.className,
+                attributes: this._config.elements?.table?.table?.attributes
             });
             this._elements.head = createElement("thead", {
-                className: this._config.classNames?.table?.tableHead.tableHead
+                className: this._config.elements?.table?.tableHead?.tableHead?.className,
+                attributes: this._config.elements?.table?.tableHead?.tableHead?.attributes
             });
             this._elements.body = createElement("tbody", {
-                className: this._config.classNames?.table?.tableBody.tableBody
+                className: this._config.elements?.table?.tableBody?.tableBody?.className,
+                attributes: this._config.elements?.table?.tableBody?.tableBody?.attributes
             });
             // Create header cells
             const columnRowElement = createElement("tr", {
-                className: this._config.classNames?.table?.tableHead.tableRow
+                className: this._config.elements?.table?.tableHead?.tableRow?.className,
+                attributes: this._config.elements?.table?.tableHead?.tableRow?.attributes,
             });
             this._config.columns.forEach(column => {
                 const columnElement = createElement("th", {
                     scope: "col",
-                    className: column.className || this._config.classNames?.table?.tableHead.tableCell,
+                    className: column.className || this._config.elements?.table?.tableHead?.tableCell?.className,
+                    attributes: this._config.elements?.table?.tableHead?.tableCell?.attributes,
                     innerHTML: column.label
                 });
                 if (column.sortable) {
@@ -1355,14 +1453,16 @@ var AjaxTable = (function () {
             }
             this._elements.body.innerHTML = "";
             // Check if data is empty and show the placeholder if needed
-            if (data.data.length === 0 && this._config.placeholderHTML !== undefined && this._config.placeholderHTML !== null && this._config.placeholderHTML !== "") {
+            if (data.data.length === 0) {
                 const placeholderElement = createElement("tr", {
-                    className: this._config.classNames?.table?.tableBody.tableCell
+                    className: this._config.elements?.table?.tableBody?.tableRow?.className,
+                    attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
                 });
                 const placeholderCellElement = createElement("td", {
                     colSpan: this._config.columns.length,
-                    className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.tableBody.tableCell,
-                    innerHTML: this._config.placeholderHTML
+                    className: this._config.elements?.table?.placeholder?.className || this._config.elements?.table?.tableBody?.tableCell?.className,
+                    attributes: this._config.elements?.table?.placeholder?.attributes,
+                    innerHTML: this._config.elements?.table?.placeholder?.innerHTML,
                 });
                 placeholderElement.appendChild(placeholderCellElement);
                 this._elements.body?.appendChild(placeholderElement);
@@ -1370,7 +1470,8 @@ var AjaxTable = (function () {
             else {
                 data.data.forEach(dataItem => {
                     const rowElement = createElement("tr", {
-                        className: this._config.classNames?.table?.tableBody.tableRow
+                        className: this._config.elements?.table?.tableBody?.tableRow?.className,
+                        attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
                     });
                     this._config.columns.forEach(column => {
                         const item = dataItem.find(function (item) {
@@ -1380,7 +1481,8 @@ var AjaxTable = (function () {
                             throw new Error(`[Table Component] Column ${column.name} not found`);
                         }
                         const columnElement = createElement("td", {
-                            className: item.className || this._config.classNames?.table?.tableBody.tableCell,
+                            className: item.className || this._config.elements?.table?.tableBody?.tableCell?.className,
+                            attributes: this._config.elements?.table?.tableBody?.tableCell?.attributes
                         });
                         // Set cell content based on the column type
                         if (column.type === "text") {
@@ -1420,17 +1522,20 @@ var AjaxTable = (function () {
         init() {
             this._coreElement.innerHTML = "";
             this._elements.container = createElement("nav", {
-                className: this._config.classNames?.pagination?.container,
+                className: this._config.elements?.pagination?.container?.className,
+                attributes: this._config.elements?.pagination?.container?.attributes,
                 ariaLabel: "Pagination"
             });
             this._elements.sizeContainer = createElement("div", {
-                className: this._config.classNames?.pagination?.sizeSelector?.container,
+                className: this._config.elements?.pagination?.sizeSelector?.container?.className,
+                attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
             });
             const sizeSelectElement = createElement("select", {
                 name: "at-size-selector",
-                className: this._config.classNames?.pagination?.sizeSelector?.select
+                className: this._config.elements?.pagination?.sizeSelector?.select?.className,
+                attributes: this._config.elements?.pagination?.sizeSelector?.select?.attributes
             });
-            this._config.pagination?.availableSizes?.forEach(size => {
+            this._config.components?.pagination?.availableSizes?.forEach(size => {
                 const optionElement = createElement("option", {
                     value: size,
                     innerText: size.toString(),
@@ -1462,8 +1567,9 @@ var AjaxTable = (function () {
             }
             this._elements.container.innerText = "";
             const previousButtonElement = createElement("button", {
-                className: this._config.classNames?.pagination?.button?.previous || this._config.classNames?.pagination?.button?.base,
-                innerHTML: this._config.pagination?.elements?.previousButtonHTML || "",
+                className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
+                attributes: this._config.elements?.pagination?.button?.previous?.attributes,
+                innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
                 disabled: data.pagination.page === 1 ? "disabled" : null,
                 type: "button"
             });
@@ -1479,10 +1585,11 @@ var AjaxTable = (function () {
                 }
             });
             const nextButtonElement = createElement("button", {
-                className: this._config.classNames?.pagination?.button?.next || this._config.classNames?.pagination?.button?.base,
-                innerHTML: this._config.pagination?.elements?.nextButtonHTML || "",
-                disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null,
-                type: "button"
+                type: "button",
+                className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
+                attributes: this._config.elements?.pagination?.button?.next?.attributes,
+                innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
+                disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null
             });
             nextButtonElement.addEventListener("click", () => {
                 if (!this._isLoading) {
@@ -1497,7 +1604,7 @@ var AjaxTable = (function () {
             });
             // Create structure
             this._elements.container?.appendChild(previousButtonElement);
-            if (this._config.pagination?.style !== "simple") {
+            if (this._config.components?.pagination?.style !== "simple") {
                 /**
                  * Internal function to create a button element with the specified page number and active state.
                  *
@@ -1506,7 +1613,8 @@ var AjaxTable = (function () {
                  */
                 const createButtonElement = (pageNumber, isActive = false) => {
                     const buttonElement = createElement("button", {
-                        className: isActive ? this._config.classNames?.pagination?.button?.active || this._config.classNames?.pagination?.button?.base : this._config.classNames?.pagination?.button?.base,
+                        className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.primary?.className : this._config.elements?.pagination?.button?.primary?.className,
+                        attributes: this._config.elements?.pagination?.button?.active?.attributes,
                         innerText: pageNumber.toString(),
                         type: "button"
                     });
@@ -1526,24 +1634,42 @@ var AjaxTable = (function () {
                  */
                 const createEllipsisElement = () => {
                     return createElement("span", {
-                        className: this._config.classNames?.pagination?.button?.ellipsis || this._config.classNames?.pagination?.button?.base,
-                        innerHTML: this._config.pagination?.elements?.ellipsisHTML || "..."
+                        className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.primary?.className,
+                        attributes: this._config.elements?.pagination?.button?.previous?.attributes,
+                        innerHTML: this._config.elements?.pagination?.button?.ellipsis?.innerHTML || "..",
                     });
                 };
                 // Always show the first page button
                 const firstButtonElement = createButtonElement(1, 1 === data.pagination.page);
                 this._elements.container?.appendChild(firstButtonElement);
-                // Add ellipsis after the first page if needed
+                // Add ellipsis after the first page if needed (on page 5 or more)
                 if (data.pagination.page > 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show pages around the current page
-                for (let i = Math.max(2, data.pagination.page - 2); i <= Math.min(data.pagination.page + 2, data.pagination.total_pages - 1); i++) {
-                    const buttonElement = createButtonElement(i, i === data.pagination.page);
-                    this._elements.container?.appendChild(buttonElement);
+                // Example: 1 2 3 4 5 .. 20
+                // Example: 1 .. 4 5 6 .. 20
+                // Example: 1 .. 16 17 18 19 20
+                if (data.pagination.page < 5) {
+                    for (let i = 2; i <= Math.min(5, data.pagination.total_pages - 1); i++) {
+                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                        this._elements.container?.appendChild(buttonElement);
+                    }
+                }
+                else if (data.pagination.page > data.pagination.total_pages - 4) {
+                    for (let i = Math.max(data.pagination.total_pages - 4, 2); i <= data.pagination.total_pages - 1; i++) {
+                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                        this._elements.container?.appendChild(buttonElement);
+                    }
+                }
+                else {
+                    for (let i = data.pagination.page - 1; i <= data.pagination.page + 1; i++) {
+                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                        this._elements.container?.appendChild(buttonElement);
+                    }
                 }
                 // Add ellipsis before the last page if needed
-                if (data.pagination.page < data.pagination.total_pages - 3) {
+                if (data.pagination.page <= data.pagination.total_pages - 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show the last page button when there are more pages than 1
@@ -1556,35 +1682,95 @@ var AjaxTable = (function () {
         }
     }
 
+    class SearchComponent extends Component {
+        constructor(coreElement, config, eventDispatcher, client) {
+            super(coreElement, config, eventDispatcher, client);
+            this._isLoading = false;
+            // Register event handlers
+            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
+            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this.init();
+        }
+        init() {
+            this._coreElement.innerHTML = "";
+            const containerElement = createElement("div", {
+                className: this._config.elements?.search?.container?.className,
+                attributes: this._config.elements?.search?.container?.attributes,
+            });
+            const inputElement = createElement("input", {
+                type: "text",
+                name: "at-search-input",
+                className: this._config.elements?.search?.input?.className,
+                attributes: this._config.elements?.search?.input?.attributes,
+            });
+            let inputTimeout = null;
+            inputElement.addEventListener("keyup", () => {
+                if (!this._isLoading) {
+                    clearTimeout(inputTimeout);
+                    inputTimeout = setTimeout(() => {
+                        if (this._config.debug)
+                            console.info(`[Search Component] Searching for ${inputElement.value}`);
+                        // Update client and refresh data
+                        this._client.search = inputElement.value;
+                        this._client.refresh();
+                    }, 500);
+                }
+            });
+            containerElement.appendChild(inputElement);
+            this._coreElement.appendChild(containerElement);
+        }
+    }
+
     class AjaxTable {
         constructor(elementSelector, config) {
             this._components = {
                 table: null,
                 pagination: null,
+                search: null
             };
             this._config = this.validateConfig(config);
             this._coreElement = document.querySelector(elementSelector);
             if (!this._coreElement) {
                 throw new Error("Container element couldn't be found.");
             }
-            // Build core HTML structure
-            const containerElement = createElement("div", {
-                className: this._config.classNames?.container
-            });
-            const footerElement = createElement("div", {
-                className: this._config.classNames?.footerContainer
-            });
+            // Clear the core element
             this._coreElement.innerHTML = "";
-            this._coreElement.appendChild(containerElement);
-            this._coreElement.appendChild(footerElement);
+            // Search for an existing header container element or create a new one
+            let headerContainerElement = this.selectElement(this._config.elements?.container?.header?.querySelector);
+            if (headerContainerElement === null) {
+                headerContainerElement = createElement("div", {
+                    className: this._config.elements?.container?.header?.className,
+                    attributes: this._config.elements?.container?.header?.attributes,
+                });
+                this._coreElement.appendChild(headerContainerElement);
+            }
+            // Search for an existing container element or create a new one
+            let containerElement = this.selectElement(this._config.elements?.container?.container?.querySelector);
+            if (containerElement === null) {
+                containerElement = createElement("div", {
+                    className: this._config.elements?.container?.container?.className,
+                    attributes: this._config.elements?.container?.container?.attributes,
+                });
+                this._coreElement.appendChild(containerElement);
+            }
+            // Search for an existing footer container element or create a new one
+            let footerContainerElement = this.selectElement(this._config.elements?.container?.footer?.querySelector);
+            if (footerContainerElement === null) {
+                footerContainerElement = createElement("div", {
+                    className: this._config.elements?.container?.footer?.className,
+                    attributes: this._config.elements?.container?.footer?.attributes,
+                });
+                this._coreElement.appendChild(footerContainerElement);
+            }
             // Define modules
             this._eventDispatcher = new EventDispatcher();
             this._client = new Client(this._config, this._eventDispatcher);
             // Register components
+            this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
             this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
-            if (this._config.pagination?.active === true) {
-                this._client.pagination = { page: 1, pageSize: this._config.pagination.pageSize };
-                this._components.pagination = new PaginationComponent(footerElement, this._config, this._eventDispatcher, this._client);
+            if (this._config.components?.pagination?.active === true) {
+                this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
+                this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
             }
             // this._client.refresh();
         }
@@ -1615,6 +1801,20 @@ var AjaxTable = (function () {
                 return configParse.data;
             }
             throw new Error(`Exception while config validation: ${configParse.error.message}`);
+        }
+        /**
+         * Selects an element from the document based on the provided query selector.
+         * Returns null if the element is not found or the query selector is empty.
+         *
+         * @param querySelector
+         * @private
+         */
+        selectElement(querySelector) {
+            console.log(querySelector);
+            if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
+                return document.querySelector(querySelector);
+            }
+            return null;
         }
     }
 

@@ -10,6 +10,7 @@ export default class Client {
 
     private _sort: Sort | null = null;
     private _pagination: Pagination | null = null;
+    private _search: string | null = null;
 
     constructor(config: ConfigSchema, eventDispatcher: EventDispatcher) {
         this._config = config;
@@ -67,6 +68,14 @@ export default class Client {
         this._pagination = value;
     }
 
+    get search(): string | null {
+        return this._search;
+    }
+
+    set search(value: string | null) {
+        this._search = value;
+    }
+
     /**
      * Generates and returns a new Request object based on the current configuration.
      *
@@ -96,10 +105,11 @@ export default class Client {
      *
      * @private
      */
-    private generateRequestBody(): { pagination: Pagination | null, sort: Sort | null } {
+    private generateRequestBody(): { pagination: Pagination | null, sort: Sort | null, search: string | null } {
         return {
-            pagination: this._pagination,
-            sort: this._sort
+            sort: this._sort,
+            search: this._search,
+            pagination: this._pagination
         }
     }
 
@@ -113,6 +123,10 @@ export default class Client {
      */
     private generateURLSearchParams(): URLSearchParams {
         let params = new URLSearchParams();
+
+        if (this._search !== null) {
+            params.append("search", this._search);
+        }
 
         if (this._pagination !== null) {
             params.append("pagination-page", this._pagination.page.toString());

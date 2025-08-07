@@ -37,20 +37,23 @@ export default class PaginationComponent extends Component {
         this._coreElement.innerHTML = "";
 
         this._elements.container = createElement("nav", {
-            className: this._config.classNames?.pagination?.container,
+            className: this._config.elements?.pagination?.container?.className,
+            attributes: this._config.elements?.pagination?.container?.attributes,
             ariaLabel: "Pagination"
         });
 
         this._elements.sizeContainer = createElement("div", {
-            className: this._config.classNames?.pagination?.sizeSelector?.container,
+            className: this._config.elements?.pagination?.sizeSelector?.container?.className,
+            attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
         });
 
         const sizeSelectElement = createElement("select", {
             name: "at-size-selector",
-            className: this._config.classNames?.pagination?.sizeSelector?.select
+            className: this._config.elements?.pagination?.sizeSelector?.select?.className,
+            attributes: this._config.elements?.pagination?.sizeSelector?.select?.attributes
         });
 
-        this._config.pagination?.availableSizes?.forEach(size => {
+        this._config.components?.pagination?.availableSizes?.forEach(size => {
             const optionElement = createElement("option", {
                 value: size,
                 innerText: size.toString(),
@@ -88,8 +91,9 @@ export default class PaginationComponent extends Component {
         this._elements.container.innerText = "";
 
         const previousButtonElement = createElement("button", {
-            className: this._config.classNames?.pagination?.button?.previous || this._config.classNames?.pagination?.button?.base,
-            innerHTML: this._config.pagination?.elements?.previousButtonHTML || "",
+            className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
+            attributes: this._config.elements?.pagination?.button?.previous?.attributes,
+            innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
             disabled: data.pagination.page === 1 ? "disabled" : null,
             type: "button"
         });
@@ -107,10 +111,11 @@ export default class PaginationComponent extends Component {
         });
 
         const nextButtonElement = createElement("button", {
-            className: this._config.classNames?.pagination?.button?.next || this._config.classNames?.pagination?.button?.base,
-            innerHTML: this._config.pagination?.elements?.nextButtonHTML || "",
-            disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null,
-            type: "button"
+            type: "button",
+            className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
+            attributes: this._config.elements?.pagination?.button?.next?.attributes,
+            innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
+            disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null
         });
 
         nextButtonElement.addEventListener("click", () => {
@@ -128,7 +133,7 @@ export default class PaginationComponent extends Component {
         // Create structure
         this._elements.container?.appendChild(previousButtonElement);
 
-        if (this._config.pagination?.style !== "simple") {
+        if (this._config.components?.pagination?.style !== "simple") {
 
             /**
              * Internal function to create a button element with the specified page number and active state.
@@ -138,7 +143,8 @@ export default class PaginationComponent extends Component {
              */
             const createButtonElement = (pageNumber: number, isActive: boolean = false) => {
                 const buttonElement = createElement("button", {
-                    className: isActive ? this._config.classNames?.pagination?.button?.active || this._config.classNames?.pagination?.button?.base : this._config.classNames?.pagination?.button?.base,
+                    className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.primary?.className : this._config.elements?.pagination?.button?.primary?.className,
+                    attributes: this._config.elements?.pagination?.button?.active?.attributes,
                     innerText: pageNumber.toString(),
                     type: "button"
                 });
@@ -161,8 +167,9 @@ export default class PaginationComponent extends Component {
              */
             const createEllipsisElement = () => {
                 return createElement("span", {
-                    className: this._config.classNames?.pagination?.button?.ellipsis || this._config.classNames?.pagination?.button?.base,
-                    innerHTML: this._config.pagination?.elements?.ellipsisHTML || "..."
+                    className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.primary?.className,
+                    attributes: this._config.elements?.pagination?.button?.previous?.attributes,
+                    innerHTML: this._config.elements?.pagination?.button?.ellipsis?.innerHTML || "..",
                 });
             }
 
@@ -170,19 +177,34 @@ export default class PaginationComponent extends Component {
             const firstButtonElement = createButtonElement(1, 1 === data.pagination.page);
             this._elements.container?.appendChild(firstButtonElement);
 
-            // Add ellipsis after the first page if needed
+            // Add ellipsis after the first page if needed (on page 5 or more)
             if (data.pagination.page > 4) {
                 this._elements.container?.appendChild(createEllipsisElement());
             }
 
             // Show pages around the current page
-            for (let i = Math.max(2, data.pagination.page - 2); i <= Math.min(data.pagination.page + 2, data.pagination.total_pages - 1); i++) {
-                const buttonElement = createButtonElement(i, i === data.pagination.page);
-                this._elements.container?.appendChild(buttonElement);
+            // Example: 1 2 3 4 5 .. 20
+            // Example: 1 .. 4 5 6 .. 20
+            // Example: 1 .. 16 17 18 19 20
+            if (data.pagination.page < 5) {
+                for (let i = 2; i <= Math.min(5, data.pagination.total_pages - 1); i++) {
+                    const buttonElement = createButtonElement(i, i === data.pagination.page);
+                    this._elements.container?.appendChild(buttonElement);
+                }
+            } else if (data.pagination.page > data.pagination.total_pages - 4) {
+                for (let i = Math.max(data.pagination.total_pages - 4, 2); i <= data.pagination.total_pages - 1; i++) {
+                    const buttonElement = createButtonElement(i, i === data.pagination.page);
+                    this._elements.container?.appendChild(buttonElement);
+                }
+            } else {
+                for (let i = data.pagination.page - 1; i <= data.pagination.page + 1; i++) {
+                    const buttonElement = createButtonElement(i, i === data.pagination.page);
+                    this._elements.container?.appendChild(buttonElement);
+                }
             }
 
             // Add ellipsis before the last page if needed
-            if (data.pagination.page < data.pagination.total_pages - 3) {
+            if (data.pagination.page <= data.pagination.total_pages - 4) {
                 this._elements.container?.appendChild(createEllipsisElement());
             }
 

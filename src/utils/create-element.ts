@@ -16,7 +16,11 @@ export function createElement<K extends keyof HTMLElementTagNameMap>(
     Object.entries(options).forEach(([key, value]) => {
         if (value === undefined || value === null) return;
 
-        if (key in element) {
+        if (key === "attributes") {
+            Object.entries(value).forEach(([attrKey, attrValue]) => {
+                element.setAttribute(attrKey, String(attrValue));
+            });
+        } else if (key in element) {
             (element as any)[key] = value;
         } else {
             element.setAttribute(key, String(value));

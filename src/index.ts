@@ -1,19 +1,24 @@
 import { configSchema, ConfigSchema } from "./schema/config";
-import { Component } from "./interfaces/component";
 import { createElement } from "./utils/create-element";
 import EventDispatcher from "./modules/event-dispatcher";
 import Client from "./modules/client";
 import TableComponent from "./components/table";
 import PaginationComponent from "./components/pagination";
+import SearchComponent from "./components/search";
 
 export default class AjaxTable {
     private readonly _config: ConfigSchema;
     private readonly _coreElement: HTMLElement | null;
     private readonly _eventDispatcher: EventDispatcher;
     private readonly _client: Client;
-    private readonly _components: { table: Component | null, pagination: Component | null } = {
+    private readonly _components: {
+        table: TableComponent | null,
+        pagination: PaginationComponent | null,
+        search: SearchComponent | null
+    } = {
         table: null,
         pagination: null,
+        search: null
     };
 
     constructor(elementSelector: string, config: ConfigSchema) {
@@ -24,28 +29,62 @@ export default class AjaxTable {
             throw new Error("Container element couldn't be found.");
         }
 
-        // Build core HTML structure
-        const containerElement = createElement("div", {
-            className: this._config.classNames?.container
-        });
-        const footerElement = createElement("div", {
-            className: this._config.classNames?.footerContainer
-        });
-
+        // Clear the core element
         this._coreElement.innerHTML = "";
-        this._coreElement.appendChild(containerElement);
-        this._coreElement.appendChild(footerElement);
+
+        // Search for an existing header container element or create a new one
+        let headerContainerElement = this.selectElement(
+            this._config.elements?.container?.header?.querySelector
+        );
+
+        if (headerContainerElement === null) {
+            headerContainerElement = createElement("div", {
+                className: this._config.elements?.container?.header?.className,
+                attributes: this._config.elements?.container?.header?.attributes,
+            });
+
+            this._coreElement.appendChild(headerContainerElement);
+        }
+
+        // Search for an existing container element or create a new one
+        let containerElement = this.selectElement(
+            this._config.elements?.container?.container?.querySelector
+        );
+
+        if (containerElement === null) {
+            containerElement = createElement("div", {
+                className: this._config.elements?.container?.container?.className,
+                attributes: this._config.elements?.container?.container?.attributes,
+            });
+
+            this._coreElement.appendChild(containerElement);
+        }
+
+        // Search for an existing footer container element or create a new one
+        let footerContainerElement = this.selectElement(
+            this._config.elements?.container?.footer?.querySelector
+        );
+
+        if (footerContainerElement === null) {
+            footerContainerElement = createElement("div", {
+                className: this._config.elements?.container?.footer?.className,
+                attributes: this._config.elements?.container?.footer?.attributes,
+            });
+
+            this._coreElement.appendChild(footerContainerElement);
+        }
 
         // Define modules
         this._eventDispatcher = new EventDispatcher();
         this._client = new Client(this._config, this._eventDispatcher);
 
         // Register components
+        this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
 
-        if (this._config.pagination?.active === true) {
-            this._client.pagination = { page: 1, pageSize: this._config.pagination.pageSize };
-            this._components.pagination = new PaginationComponent(footerElement, this._config, this._eventDispatcher, this._client);
+        if (this._config.components?.pagination?.active === true) {
+            this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
+            this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
         }
 
         // this._client.refresh();
@@ -81,5 +120,21 @@ export default class AjaxTable {
         }
 
         throw new Error(`Exception while config validation: ${ configParse.error.message }`);
+    }
+
+    /**
+     * Selects an element from the document based on the provided query selector.
+     * Returns null if the element is not found or the query selector is empty.
+     *
+     * @param querySelector
+     * @private
+     */
+    private selectElement(querySelector: string | null | undefined): HTMLElement | null {
+        console.log(querySelector);
+        if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
+            return document.querySelector(querySelector) as HTMLElement;
+        }
+
+        return null;
     }
 };

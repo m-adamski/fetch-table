@@ -25,6 +25,9 @@
                     </div>
                 </div>
             </div>
+            <div class="bg-red-50" id="search-container">
+                dd
+            </div>
         </div>
 
         <script>
@@ -40,59 +43,107 @@
                             type: "text",
                             label: "First Name",
                             sortable: true,
+                            searchable: true,
                         },
                         {
                             name: "lastName",
                             type: "text",
                             label: "Last Name",
                             sortable: true,
+                            searchable: true,
                         },
                         {
                             name: "type",
                             type: "text",
                             label: "Account type",
                             sortable: true,
+                            searchable: true,
                         },
                         {
                             name: "emailAddress",
                             type: "text",
                             label: "Email address",
                             sortable: true,
+                            searchable: true,
                         },
                     ],
-                    classNames: {
-                        table: {
-                            table: "relative min-w-full divide-y divide-gray-300",
-                            tableHead: {
-                                tableCell: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    elements: {
+                        container: {
+                            header: {
+                                // querySelector: "#search-container",
                             },
-                            tableBody: {
-                                tableBody: "divide-y divide-gray-200",
-                                tableCell: "px-3 py-4 text-sm whitespace-nowrap text-gray-500"
-                            },
-                            placeholder: "text-center"
-                        },
-                        footerContainer: "flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6",
-                        pagination: {
-                            container: "isolate inline-flex -space-x-px rounded-md",
-                            button: {
-                                base: "relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 cursor-pointer rounded-sm hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-default",
-                                active: "relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white rounded-sm focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600",
-                            },
-                            sizeSelector: {
-                                container: "mt-2 grid grid-cols-1",
-                                select: "col-start-1 row-start-1 w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                            footer: {
+                                className: "flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
                             }
                         },
-                    },
-                    pagination: {
-                        active: true,
-                        pageSize: 10,
-                        elements: {
-                            previousButtonHTML: "Previous",
-                            nextButtonHTML: "Next",
+                        table: {
+                            table: {
+                                className: "relative min-w-full divide-y divide-gray-300"
+                            },
+                            tableHead: {
+                                tableCell: {
+                                    className: "px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                                }
+                            },
+                            tableBody: {
+                                tableBody: {
+                                    className: "divide-y divide-gray-200"
+                                },
+                                tableCell: {
+                                    className: "px-3 py-4 text-sm whitespace-nowrap text-gray-500"
+                                }
+                            },
+                            placeholder: {
+                                className: "text-center py-3",
+                                innerHTML: "No data available"
+                            }
+                        },
+                        pagination: {
+                            container: {
+                                className: "isolate inline-flex -space-x-px rounded-md"
+                            },
+                            button: {
+                                primary: {
+                                    className: "relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 cursor-pointer rounded-sm hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-default"
+                                },
+                                active: {
+                                    className: "relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white rounded-sm focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                },
+                                previous: {
+                                    innerHTML: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-3">\n' +
+                                        '  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />\n' +
+                                        '</svg>\n'
+                                },
+                                next: {
+                                    innerHTML: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-3">\n' +
+                                        '  <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />\n' +
+                                        '</svg>\n',
+                                }
+                            },
+                            sizeSelector: {
+                                container: {
+                                    className: "mt-2 grid grid-cols-1"
+                                },
+                                select: {
+                                    className: "col-start-1 row-start-1 w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                }
+                            }
+                        },
+                        search: {
+                            input: {
+                                className: "block w-full max-w-[200px] rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6",
+                                attributes: {
+                                    placeholder: "Search..",
+                                }
+                            }
                         }
                     },
+                    components: {
+                        pagination: {
+                            active: true,
+                            pageSize: 10,
+                        },
+                    }
                 });
 
                 ajaxTable.on("before-data-refresh", (request) => {

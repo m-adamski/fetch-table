@@ -35,26 +35,31 @@ export default class TableComponent extends Component {
 
         // Create core elements
         this._elements.table = createElement("table", {
-            className: this._config.classNames?.table?.table
+            className: this._config.elements?.table?.table?.className,
+            attributes: this._config.elements?.table?.table?.attributes
         });
 
         this._elements.head = createElement("thead", {
-            className: this._config.classNames?.table?.tableHead.tableHead
+            className: this._config.elements?.table?.tableHead?.tableHead?.className,
+            attributes: this._config.elements?.table?.tableHead?.tableHead?.attributes
         });
 
         this._elements.body = createElement("tbody", {
-            className: this._config.classNames?.table?.tableBody.tableBody
+            className: this._config.elements?.table?.tableBody?.tableBody?.className,
+            attributes: this._config.elements?.table?.tableBody?.tableBody?.attributes
         });
 
         // Create header cells
         const columnRowElement = createElement("tr", {
-            className: this._config.classNames?.table?.tableHead.tableRow
+            className: this._config.elements?.table?.tableHead?.tableRow?.className,
+            attributes: this._config.elements?.table?.tableHead?.tableRow?.attributes,
         });
 
         this._config.columns.forEach(column => {
             const columnElement = createElement("th", {
                 scope: "col",
-                className: column.className || this._config.classNames?.table?.tableHead.tableCell,
+                className: column.className || this._config.elements?.table?.tableHead?.tableCell?.className,
+                attributes: this._config.elements?.table?.tableHead?.tableCell?.attributes,
                 innerHTML: column.label
             });
 
@@ -109,15 +114,17 @@ export default class TableComponent extends Component {
         this._elements.body.innerHTML = "";
 
         // Check if data is empty and show the placeholder if needed
-        if (data.data.length === 0 && this._config.placeholderHTML !== undefined && this._config.placeholderHTML !== null && this._config.placeholderHTML !== "") {
+        if (data.data.length === 0) {
             const placeholderElement = createElement("tr", {
-                className: this._config.classNames?.table?.tableBody.tableCell
+                className: this._config.elements?.table?.tableBody?.tableRow?.className,
+                attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
             });
 
             const placeholderCellElement = createElement("td", {
                 colSpan: this._config.columns.length,
-                className: this._config.classNames?.table?.placeholder || this._config.classNames?.table?.tableBody.tableCell,
-                innerHTML: this._config.placeholderHTML
+                className: this._config.elements?.table?.placeholder?.className || this._config.elements?.table?.tableBody?.tableCell?.className,
+                attributes: this._config.elements?.table?.placeholder?.attributes,
+                innerHTML: this._config.elements?.table?.placeholder?.innerHTML,
             })
 
             placeholderElement.appendChild(placeholderCellElement);
@@ -125,7 +132,8 @@ export default class TableComponent extends Component {
         } else {
             data.data.forEach(dataItem => {
                 const rowElement = createElement("tr", {
-                    className: this._config.classNames?.table?.tableBody.tableRow
+                    className: this._config.elements?.table?.tableBody?.tableRow?.className,
+                    attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
                 });
 
                 this._config.columns.forEach(column => {
@@ -138,7 +146,8 @@ export default class TableComponent extends Component {
                     }
 
                     const columnElement = createElement("td", {
-                        className: item.className || this._config.classNames?.table?.tableBody.tableCell,
+                        className: item.className || this._config.elements?.table?.tableBody?.tableCell?.className,
+                        attributes: this._config.elements?.table?.tableBody?.tableCell?.attributes
                     });
 
                     // Set cell content based on the column type

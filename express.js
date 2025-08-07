@@ -16,11 +16,26 @@ app.get("/ajax-data", (request, response) => {
     const requestQuery = request.query;
     let responseData = data;
 
-    if (requestQuery["sort-column"] !== undefined && requestQuery["sort-direction"] !== undefined) {
-        let sortColumn = requestQuery["sort-column"];
-        let sortDirection = requestQuery["sort-direction"];
+    let search = requestQuery["search"];
+    let sortColumn = requestQuery["sort-column"];
+    let sortDirection = requestQuery["sort-direction"];
+    let paginationPage = Number(requestQuery["pagination-page"]) || 1;
+    let paginationSize = Number(requestQuery["pagination-size"]) || 10;
 
-        // Sort
+    if (search !== undefined) {
+        responseData = responseData.filter(item => {
+            let matches = false;
+            item.forEach(column => {
+                if (column.value.toLowerCase().includes(search.toLowerCase())) {
+                    matches = true;
+                }
+            });
+
+            return matches;
+        });
+    }
+
+    if (sortColumn !== undefined && sortDirection !== undefined) {
         responseData = responseData.sort((a, b) => {
             let aColumn = a.find(column => column.column === sortColumn);
             let bColumn = b.find(column => column.column === sortColumn);
@@ -45,20 +60,19 @@ app.get("/ajax-data", (request, response) => {
         });
     }
 
-    if (requestQuery["pagination-page"] !== undefined && requestQuery["pagination-size"] !== undefined) {
-        let paginationPage = requestQuery["pagination-page"];
-        let paginationSize = requestQuery["pagination-size"];
-
+    let totalFiltered = responseData.length;
+    if (paginationPage !== undefined && paginationSize !== undefined) {
         responseData = responseData.slice((paginationPage - 1) * paginationSize, paginationPage * paginationSize);
+        console.log(responseData, responseData.length);
     }
 
     response.json({
         "total": data.length,
-        "total_filtered": data.length,
+        "total_filtered": totalFiltered,
         "pagination": {
-            "page": Number(requestQuery["pagination-page"]) || 1,
-            "page_size": Number(requestQuery["pagination-size"]) || 30,
-            "total_pages": Math.ceil(data.length / (requestQuery["pagination-size"] || 30)) || 1,
+            "page": paginationPage,
+            "page_size": paginationSize,
+            "total_pages": Math.ceil(totalFiltered / paginationSize),
         },
         "data": responseData
     });
