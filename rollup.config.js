@@ -8,12 +8,12 @@ export default {
         {
             file: "dist/table.bundle.js",
             format: "iife",
-            name: "AjaxTable"
+            name: "FetchTable"
         },
         {
             file: "dist/table.bundle.min.js",
             format: "iife",
-            name: "AjaxTable",
+            name: "FetchTable",
             plugins: [ terser() ]
         }
     ],

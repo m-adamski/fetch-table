@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/ajax-table.iml" filepath="$PROJECT_DIR$/.idea/ajax-table.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/fetch-table.iml" filepath="$PROJECT_DIR$/.idea/fetch-table.iml" />
     </modules>
   </component>
 </project>

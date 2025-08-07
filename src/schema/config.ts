@@ -6,7 +6,7 @@ export const configSchema = z.object({
     "ajaxMethod": z._default(z.enum(["GET", "POST"]), "GET"),
     "ajaxHeaders": z._default(z.record(z.string(), z.string()), {
         "Content-Type": "application/json",
-        "X-Requested-By": "ajax-table"
+        "X-Requested-By": "fetch-table"
     }),
     "debug": z._default(z.boolean(), false),
     "columns": z.array(columnSchema),

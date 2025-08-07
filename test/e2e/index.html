@@ -6,7 +6,7 @@
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
         <script src="/dist/table.bundle.js"></script>
 
-        <title>AJAX Table</title>
+        <title>FetchTable</title>
     </head>
     <body>
         <div class="px-4 py-4 sm:px-6 lg:px-8">
@@ -29,7 +29,7 @@
 
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-                const ajaxTable = new AjaxTable("#table", {
+                const fetchTable = new FetchTable("#table", {
                     ajaxURL: "/ajax-data",
                     debug: false,
                     columns: [
@@ -148,7 +148,7 @@
                 // ajaxTable.on("data-fetch", (data) => console.log("Response data from index.html: ", data));
 
                 // Initial data refresh
-                ajaxTable.refreshData();
+                fetchTable.refreshData();
             });
         </script>
     </body>

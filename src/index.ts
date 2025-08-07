@@ -6,7 +6,7 @@ import TableComponent from "./components/table";
 import PaginationComponent from "./components/pagination";
 import SearchComponent from "./components/search";
 
-export default class AjaxTable {
+export default class FetchTable {
     private readonly _config: ConfigSchema;
     private readonly _coreElement: HTMLElement | null;
     private readonly _eventDispatcher: EventDispatcher;

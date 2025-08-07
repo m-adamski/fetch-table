@@ -1,4 +1,4 @@
-var AjaxTable = (function () {
+var FetchTable = (function () {
     'use strict';
 
     /** A special constant with type `never` */
@@ -335,7 +335,7 @@ var AjaxTable = (function () {
     const version = {
         major: 4,
         minor: 0,
-        patch: 14,
+        patch: 15,
     };
 
     const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
@@ -1038,7 +1038,7 @@ var AjaxTable = (function () {
         "ajaxMethod": _default(_enum(["GET", "POST"]), "GET"),
         "ajaxHeaders": _default(record(string(), string()), {
             "Content-Type": "application/json",
-            "X-Requested-By": "ajax-table"
+            "X-Requested-By": "fetch-table"
         }),
         "debug": _default(boolean(), false),
         "columns": array(columnSchema),
@@ -1752,7 +1752,7 @@ var AjaxTable = (function () {
         }
     }
 
-    class AjaxTable {
+    class FetchTable {
         constructor(elementSelector, config) {
             this._components = {
                 table: null,
@@ -1848,6 +1848,6 @@ var AjaxTable = (function () {
         }
     }
 
-    return AjaxTable;
+    return FetchTable;
 
 })();
