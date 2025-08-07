@@ -11,13 +11,15 @@ export default class SearchComponent extends Component {
         super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
-        this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-        this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
 
         this.init();
     }
 
     private init(): void {
+        if (this._config.debug) console.info("[Search Component] Initializing..");
+
         this._coreElement.innerHTML = "";
 
         const containerElement = createElement("div", {
@@ -38,10 +40,13 @@ export default class SearchComponent extends Component {
                 clearTimeout(inputTimeout);
 
                 inputTimeout = setTimeout(() => {
-                    if (this._config.debug) console.info(`[Search Component] Searching for ${ inputElement.value }`);
+                    if (this._config.debug) console.info(`[Search Component] Searching for "${ inputElement.value }"`);
 
-                    // Update client and refresh data
-                    this._client.search = inputElement.value;
+                    // Get search query, dispatch event and refresh data
+                    let searchQuery: string = inputElement.value;
+
+                    this._eventDispatcher.dispatch("search-change", searchQuery);
+                    this._client.search = searchQuery;
                     this._client.refresh();
                 }, 500);
             }

@@ -1,6 +1,7 @@
 import Component from "./component";
 import { ConfigSchema } from "../schema/config";
 import { ResponseSchema } from "../schema/response";
+import { Pagination } from "../interfaces/pagination";
 import { createElement } from "../utils/create-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
@@ -21,9 +22,9 @@ export default class PaginationComponent extends Component {
         super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
-        this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-        this._eventDispatcher.register("data-refresh", (data) => this.render(data));
-        this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+        this._eventDispatcher.register("data-fetch", (data) => this.render(data));
+        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
 
         this.init();
     }
@@ -34,6 +35,8 @@ export default class PaginationComponent extends Component {
      * then appends it to the core element of the component.
      */
     private init(): void {
+        if (this._config.debug) console.info("[Pagination Component] Initializing..");
+
         this._coreElement.innerHTML = "";
 
         this._elements.container = createElement("nav", {
@@ -67,7 +70,14 @@ export default class PaginationComponent extends Component {
             if (!this._isLoading) {
                 if (this._config.debug) console.info(`[Pagination Component] Changing page size to ${ sizeSelectElement.value }`);
 
-                this._client.pagination = { page: 1, pageSize: parseInt(sizeSelectElement.value) };
+                // Create the pagination object, dispatch event and refresh data
+                let pagination: Pagination = {
+                    page: 1,
+                    pageSize: parseInt(sizeSelectElement.value)
+                };
+
+                this._eventDispatcher.dispatch("pagination-size-change", pagination);
+                this._client.pagination = pagination;
                 this._client.refresh();
             }
         });
@@ -84,8 +94,10 @@ export default class PaginationComponent extends Component {
      * @private
      */
     private render(data: ResponseSchema): void {
+        if (this._config.debug) console.info("[Pagination Component] Rendering data..");
+
         if (this._elements.container === null) {
-            throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method.");
+            throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method");
         }
 
         this._elements.container.innerText = "";
@@ -101,10 +113,16 @@ export default class PaginationComponent extends Component {
         previousButtonElement.addEventListener("click", () => {
             if (!this._isLoading) {
                 if (data.pagination.page > 1) {
-                    if (this._config.debug) console.info(`[Pagination Component] Moving to previous page`);
+                    if (this._config.debug) console.info(`[Pagination Component] Moving to the previous page`);
 
-                    // Update client and refresh data
-                    this._client.pagination = { page: data.pagination.page - 1, pageSize: data.pagination.page_size };
+                    // Create the pagination object, dispatch event and refresh data
+                    let pagination: Pagination = {
+                        page: data.pagination.page - 1,
+                        pageSize: data.pagination.page_size
+                    };
+
+                    this._eventDispatcher.dispatch("pagination-change", pagination);
+                    this._client.pagination = pagination;
                     this._client.refresh();
                 }
             }
@@ -121,10 +139,16 @@ export default class PaginationComponent extends Component {
         nextButtonElement.addEventListener("click", () => {
             if (!this._isLoading) {
                 if (data.pagination.page < data.pagination.total_pages) {
-                    if (this._config.debug) console.info(`[Pagination Component] Moving to next page`);
+                    if (this._config.debug) console.info(`[Pagination Component] Moving to the next page`);
 
-                    // Update client and refresh data
-                    this._client.pagination = { page: data.pagination.page + 1, pageSize: data.pagination.page_size };
+                    // Create the pagination object, dispatch event and refresh data
+                    let pagination: Pagination = {
+                        page: data.pagination.page + 1,
+                        pageSize: data.pagination.page_size
+                    }
+
+                    this._eventDispatcher.dispatch("pagination-change", pagination);
+                    this._client.pagination = pagination;
                     this._client.refresh();
                 }
             }
@@ -151,9 +175,15 @@ export default class PaginationComponent extends Component {
 
                 buttonElement.addEventListener("click", () => {
                     if (!this._isLoading) {
-                        if (this._config.debug) console.info(`[Pagination Component] Moving to ${ pageNumber } page`);
+                        if (this._config.debug) console.info(`[Pagination Component] Moving to page number: ${ pageNumber }`);
 
-                        // Update client and refresh data
+                        // Create the pagination object, dispatch event and refresh data
+                        let pagination: Pagination = {
+                            page: pageNumber,
+                            pageSize: data.pagination.page_size
+                        };
+
+                        this._eventDispatcher.dispatch("pagination-change", pagination);
                         this._client.pagination = { page: pageNumber, pageSize: data.pagination.page_size };
                         this._client.refresh();
                     }

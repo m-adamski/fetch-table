@@ -130,7 +130,6 @@ export default class AjaxTable {
      * @private
      */
     private selectElement(querySelector: string | null | undefined): HTMLElement | null {
-        console.log(querySelector);
         if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
             return document.querySelector(querySelector) as HTMLElement;
         }

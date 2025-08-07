@@ -1244,7 +1244,7 @@ var AjaxTable = (function () {
         /**
          * Refreshes data by triggering an AJAX request to the configured URL.
          * Handles the data response and dispatches appropriate events in the process,
-         * including "before-data-refresh", "data-refresh", "after-data-refresh", and "data-refresh-error".
+         * including "before-data-fetch", "data-fetch", "after-data-fetch", and "data-fetch-error".
          */
         refresh() {
             if (this._config.debug)
@@ -1252,26 +1252,26 @@ var AjaxTable = (function () {
             // Generate request
             const fetchRequest = this.generateRequest();
             // Dispatch event with fetch request to allow for custom handling
-            this._eventDispatcher.dispatch("before-data-refresh", fetchRequest);
+            this._eventDispatcher.dispatch("before-data-fetch", fetchRequest);
             fetch(fetchRequest).then(response => {
                 if (response.ok) {
                     response.json().then(data => {
                         const responseData = responseSchema.parse(data);
                         // Dispatch event
-                        this._eventDispatcher.dispatch("data-refresh", responseData);
-                        this._eventDispatcher.dispatch("after-data-refresh");
+                        this._eventDispatcher.dispatch("data-fetch", responseData);
+                        this._eventDispatcher.dispatch("after-data-fetch");
                     }).catch(error => {
                         if (this._config.debug)
                             console.error(error);
-                        this._eventDispatcher.dispatch("data-refresh-error", { error: error });
-                        this._eventDispatcher.dispatch("after-data-refresh");
+                        this._eventDispatcher.dispatch("data-fetch-error", { error: error });
+                        this._eventDispatcher.dispatch("after-data-fetch");
                     });
                 }
             }).catch(error => {
                 if (this._config.debug)
                     console.error(error);
-                this._eventDispatcher.dispatch("data-refresh-error", { error: error });
-                this._eventDispatcher.dispatch("after-data-refresh");
+                this._eventDispatcher.dispatch("data-fetch-error", { error: error });
+                this._eventDispatcher.dispatch("after-data-fetch");
             });
         }
         get sort() {
@@ -1371,9 +1371,9 @@ var AjaxTable = (function () {
                 body: null
             };
             // Register event handlers
-            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-            this._eventDispatcher.register("data-refresh", (data) => this.render(data));
-            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+            this._eventDispatcher.register("data-fetch", (data) => this.render(data));
+            this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
             this.init();
         }
         /**
@@ -1381,6 +1381,8 @@ var AjaxTable = (function () {
          * including the table, header, and body, as well as setting up column headers and sorting behavior.
          */
         init() {
+            if (this._config.debug)
+                console.info("[Table Component] Initializing..");
             this._coreElement.innerHTML = "";
             // Create core elements
             this._elements.table = createElement("table", {
@@ -1411,8 +1413,8 @@ var AjaxTable = (function () {
                     columnElement.addEventListener("click", () => {
                         if (!this._isLoading) {
                             if (this._config.debug)
-                                console.info(`[Table Component] Sort by column: ${column.name}`);
-                            // Define sort object
+                                console.info(`[Table Component] Sort by the column: ${column.name}`);
+                            // Update sort object, dispatch event and refresh data
                             if (this._sort === null) {
                                 this._sort = { column: column, direction: "ASC" };
                             }
@@ -1424,7 +1426,7 @@ var AjaxTable = (function () {
                                     this._sort = { column: column, direction: "ASC" };
                                 }
                             }
-                            // Update client and refresh data
+                            this._eventDispatcher.dispatch("sort-change", this._sort);
                             this._client.sort = this._sort;
                             this._client.refresh();
                         }
@@ -1449,7 +1451,7 @@ var AjaxTable = (function () {
             if (this._config.debug)
                 console.info("[Table Component] Rendering data..");
             if (this._elements.body === null) {
-                throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method.");
+                throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method");
             }
             this._elements.body.innerHTML = "";
             // Check if data is empty and show the placeholder if needed
@@ -1509,9 +1511,9 @@ var AjaxTable = (function () {
                 sizeSelect: null
             };
             // Register event handlers
-            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-            this._eventDispatcher.register("data-refresh", (data) => this.render(data));
-            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+            this._eventDispatcher.register("data-fetch", (data) => this.render(data));
+            this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
             this.init();
         }
         /**
@@ -1520,6 +1522,8 @@ var AjaxTable = (function () {
          * then appends it to the core element of the component.
          */
         init() {
+            if (this._config.debug)
+                console.info("[Pagination Component] Initializing..");
             this._coreElement.innerHTML = "";
             this._elements.container = createElement("nav", {
                 className: this._config.elements?.pagination?.container?.className,
@@ -1547,7 +1551,13 @@ var AjaxTable = (function () {
                 if (!this._isLoading) {
                     if (this._config.debug)
                         console.info(`[Pagination Component] Changing page size to ${sizeSelectElement.value}`);
-                    this._client.pagination = { page: 1, pageSize: parseInt(sizeSelectElement.value) };
+                    // Create the pagination object, dispatch event and refresh data
+                    let pagination = {
+                        page: 1,
+                        pageSize: parseInt(sizeSelectElement.value)
+                    };
+                    this._eventDispatcher.dispatch("pagination-size-change", pagination);
+                    this._client.pagination = pagination;
                     this._client.refresh();
                 }
             });
@@ -1562,8 +1572,10 @@ var AjaxTable = (function () {
          * @private
          */
         render(data) {
+            if (this._config.debug)
+                console.info("[Pagination Component] Rendering data..");
             if (this._elements.container === null) {
-                throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method.");
+                throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method");
             }
             this._elements.container.innerText = "";
             const previousButtonElement = createElement("button", {
@@ -1577,9 +1589,14 @@ var AjaxTable = (function () {
                 if (!this._isLoading) {
                     if (data.pagination.page > 1) {
                         if (this._config.debug)
-                            console.info(`[Pagination Component] Moving to previous page`);
-                        // Update client and refresh data
-                        this._client.pagination = { page: data.pagination.page - 1, pageSize: data.pagination.page_size };
+                            console.info(`[Pagination Component] Moving to the previous page`);
+                        // Create the pagination object, dispatch event and refresh data
+                        let pagination = {
+                            page: data.pagination.page - 1,
+                            pageSize: data.pagination.page_size
+                        };
+                        this._eventDispatcher.dispatch("pagination-change", pagination);
+                        this._client.pagination = pagination;
                         this._client.refresh();
                     }
                 }
@@ -1595,9 +1612,14 @@ var AjaxTable = (function () {
                 if (!this._isLoading) {
                     if (data.pagination.page < data.pagination.total_pages) {
                         if (this._config.debug)
-                            console.info(`[Pagination Component] Moving to next page`);
-                        // Update client and refresh data
-                        this._client.pagination = { page: data.pagination.page + 1, pageSize: data.pagination.page_size };
+                            console.info(`[Pagination Component] Moving to the next page`);
+                        // Create the pagination object, dispatch event and refresh data
+                        let pagination = {
+                            page: data.pagination.page + 1,
+                            pageSize: data.pagination.page_size
+                        };
+                        this._eventDispatcher.dispatch("pagination-change", pagination);
+                        this._client.pagination = pagination;
                         this._client.refresh();
                     }
                 }
@@ -1621,8 +1643,13 @@ var AjaxTable = (function () {
                     buttonElement.addEventListener("click", () => {
                         if (!this._isLoading) {
                             if (this._config.debug)
-                                console.info(`[Pagination Component] Moving to ${pageNumber} page`);
-                            // Update client and refresh data
+                                console.info(`[Pagination Component] Moving to page number: ${pageNumber}`);
+                            // Create the pagination object, dispatch event and refresh data
+                            let pagination = {
+                                page: pageNumber,
+                                pageSize: data.pagination.page_size
+                            };
+                            this._eventDispatcher.dispatch("pagination-change", pagination);
                             this._client.pagination = { page: pageNumber, pageSize: data.pagination.page_size };
                             this._client.refresh();
                         }
@@ -1687,11 +1714,13 @@ var AjaxTable = (function () {
             super(coreElement, config, eventDispatcher, client);
             this._isLoading = false;
             // Register event handlers
-            this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-            this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+            this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+            this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
             this.init();
         }
         init() {
+            if (this._config.debug)
+                console.info("[Search Component] Initializing..");
             this._coreElement.innerHTML = "";
             const containerElement = createElement("div", {
                 className: this._config.elements?.search?.container?.className,
@@ -1709,9 +1738,11 @@ var AjaxTable = (function () {
                     clearTimeout(inputTimeout);
                     inputTimeout = setTimeout(() => {
                         if (this._config.debug)
-                            console.info(`[Search Component] Searching for ${inputElement.value}`);
-                        // Update client and refresh data
-                        this._client.search = inputElement.value;
+                            console.info(`[Search Component] Searching for "${inputElement.value}"`);
+                        // Get search query, dispatch event and refresh data
+                        let searchQuery = inputElement.value;
+                        this._eventDispatcher.dispatch("search-change", searchQuery);
+                        this._client.search = searchQuery;
                         this._client.refresh();
                     }, 500);
                 }
@@ -1810,7 +1841,6 @@ var AjaxTable = (function () {
          * @private
          */
         selectElement(querySelector) {
-            console.log(querySelector);
             if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
                 return document.querySelector(querySelector);
             }

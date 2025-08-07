@@ -19,9 +19,9 @@ export default class TableComponent extends Component {
         super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
-        this._eventDispatcher.register("before-data-refresh", () => this._isLoading = true);
-        this._eventDispatcher.register("data-refresh", (data) => this.render(data));
-        this._eventDispatcher.register("after-data-refresh", () => this._isLoading = false);
+        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+        this._eventDispatcher.register("data-fetch", (data) => this.render(data));
+        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
 
         this.init();
     }
@@ -31,6 +31,8 @@ export default class TableComponent extends Component {
      * including the table, header, and body, as well as setting up column headers and sorting behavior.
      */
     private init(): void {
+        if (this._config.debug) console.info("[Table Component] Initializing..");
+
         this._coreElement.innerHTML = "";
 
         // Create core elements
@@ -66,9 +68,9 @@ export default class TableComponent extends Component {
             if (column.sortable) {
                 columnElement.addEventListener("click", () => {
                     if (!this._isLoading) {
-                        if (this._config.debug) console.info(`[Table Component] Sort by column: ${ column.name }`);
+                        if (this._config.debug) console.info(`[Table Component] Sort by the column: ${ column.name }`);
 
-                        // Define sort object
+                        // Update sort object, dispatch event and refresh data
                         if (this._sort === null) {
                             this._sort = { column: column, direction: "ASC" };
                         } else {
@@ -79,7 +81,7 @@ export default class TableComponent extends Component {
                             }
                         }
 
-                        // Update client and refresh data
+                        this._eventDispatcher.dispatch("sort-change", this._sort);
                         this._client.sort = this._sort;
                         this._client.refresh();
                     }
@@ -108,7 +110,7 @@ export default class TableComponent extends Component {
         if (this._config.debug) console.info("[Table Component] Rendering data..");
 
         if (this._elements.body === null) {
-            throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method.")
+            throw new Error("[Table Component] Body element couldn't be found. First, initialize the component with the init() method")
         }
 
         this._elements.body.innerHTML = "";

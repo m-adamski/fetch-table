@@ -20,7 +20,7 @@ export default class Client {
     /**
      * Refreshes data by triggering an AJAX request to the configured URL.
      * Handles the data response and dispatches appropriate events in the process,
-     * including "before-data-refresh", "data-refresh", "after-data-refresh", and "data-refresh-error".
+     * including "before-data-fetch", "data-fetch", "after-data-fetch", and "data-fetch-error".
      */
     public refresh(): void {
         if (this._config.debug) console.info("Refreshing data..");
@@ -29,7 +29,7 @@ export default class Client {
         const fetchRequest: Request = this.generateRequest();
 
         // Dispatch event with fetch request to allow for custom handling
-        this._eventDispatcher.dispatch("before-data-refresh", fetchRequest);
+        this._eventDispatcher.dispatch("before-data-fetch", fetchRequest);
 
         fetch(fetchRequest).then(response => {
             if (response.ok) {
@@ -37,18 +37,18 @@ export default class Client {
                     const responseData: ResponseSchema = responseSchema.parse(data);
 
                     // Dispatch event
-                    this._eventDispatcher.dispatch("data-refresh", responseData);
-                    this._eventDispatcher.dispatch("after-data-refresh");
+                    this._eventDispatcher.dispatch("data-fetch", responseData);
+                    this._eventDispatcher.dispatch("after-data-fetch");
                 }).catch(error => {
                     if (this._config.debug) console.error(error);
-                    this._eventDispatcher.dispatch("data-refresh-error", { error: error });
-                    this._eventDispatcher.dispatch("after-data-refresh");
+                    this._eventDispatcher.dispatch("data-fetch-error", { error: error });
+                    this._eventDispatcher.dispatch("after-data-fetch");
                 });
             }
         }).catch(error => {
             if (this._config.debug) console.error(error);
-            this._eventDispatcher.dispatch("data-refresh-error", { error: error });
-            this._eventDispatcher.dispatch("after-data-refresh");
+            this._eventDispatcher.dispatch("data-fetch-error", { error: error });
+            this._eventDispatcher.dispatch("after-data-fetch");
         });
     }
 

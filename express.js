@@ -63,7 +63,6 @@ app.get("/ajax-data", (request, response) => {
     let totalFiltered = responseData.length;
     if (paginationPage !== undefined && paginationSize !== undefined) {
         responseData = responseData.slice((paginationPage - 1) * paginationSize, paginationPage * paginationSize);
-        console.log(responseData, responseData.length);
     }
 
     response.json({
