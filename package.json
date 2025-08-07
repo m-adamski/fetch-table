@@ -2,6 +2,15 @@
     "name": "fetch-table",
     "version": "0.1.0",
     "type": "module",
+    "main": "dist/table.bundle.js",
+    "repository": "https://github.com/m-adamski/fetch-table.git",
+    "author": {
+        "name": "Maciej Adamski"
+    },
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com"
+    },
+    "license": "MIT",
     "scripts": {
         "rollup:build": "rollup -c rollup.config.js",
         "rollup:watch": "rollup -c rollup.config.js --watch",
