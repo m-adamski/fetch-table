@@ -1,5 +1,8 @@
-var FetchTable = (function () {
-    'use strict';
+(function (global, factory) {
+    typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
+    typeof define === 'function' && define.amd ? define(factory) :
+    (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.FetchTable = factory());
+})(this, (function () { 'use strict';
 
     /** A special constant with type `never` */
     function $constructor(name, initializer, params) {
@@ -1850,4 +1853,4 @@ var FetchTable = (function () {
 
     return FetchTable;
 
-})();
+}));

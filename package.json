@@ -1,17 +1,15 @@
 {
     "name": "@m-adamski/fetch-table",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "type": "module",
     "main": "dist/table.bundle.js",
+    "module": "dist/table.bundle.esm.js",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/m-adamski/fetch-table.git"
     },
     "author": {
         "name": "Maciej Adamski"
-    },
-    "publishConfig": {
-        "registry": "https://npm.pkg.github.com"
     },
     "license": "MIT",
     "scripts": {
