@@ -1,5 +1,5 @@
 {
-    "name": "fetch-table",
+    "name": "@m-adamski/fetch-table",
     "version": "0.1.0",
     "type": "module",
     "main": "dist/table.bundle.js",
