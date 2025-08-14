@@ -29,7 +29,6 @@ export default class SearchComponent extends Component {
 
         const inputElement = createElement("input", {
             type: "text",
-            name: "at-search-input",
             className: this._config.elements?.search?.input?.className,
             attributes: this._config.elements?.search?.input?.attributes,
         });

@@ -79,15 +79,16 @@ export default class FetchTable {
         this._client = new Client(this._config, this._eventDispatcher);
 
         // Register components
-        this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
+
+        if (this._config.components?.search?.active === true) {
+            this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
+        }
 
         if (this._config.components?.pagination?.active === true) {
             this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
             this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
         }
-
-        // this._client.refresh();
     }
 
     /**
@@ -98,6 +99,28 @@ export default class FetchTable {
      */
     on(event: string, callback: (data?: any) => void): void {
         this._eventDispatcher.register(event, callback, 1000);
+    }
+
+    /**
+     * Retrieves the current configuration settings.
+     */
+    get config(): ConfigSchema {
+        return this._config;
+    }
+
+    /**
+     * Retrieves the event dispatcher instance.
+     * The event dispatcher is responsible for managing event listeners and dispatching events.
+     */
+    get eventDispatcher(): EventDispatcher {
+        return this._eventDispatcher;
+    }
+
+    /**
+     * Retrieves the current HTTP client instance.
+     */
+    get client(): Client {
+        return this._client;
     }
 
     /**

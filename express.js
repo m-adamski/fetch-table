@@ -67,11 +67,11 @@ app.get("/ajax-data", (request, response) => {
 
     response.json({
         "total": data.length,
-        "total_filtered": totalFiltered,
+        "totalFiltered": totalFiltered,
         "pagination": {
             "page": paginationPage,
-            "page_size": paginationSize,
-            "total_pages": Math.ceil(totalFiltered / paginationSize),
+            "pageSize": paginationSize,
+            "totalPages": Math.ceil(totalFiltered / paginationSize),
         },
         "data": responseData
     });

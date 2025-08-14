@@ -1158,7 +1158,10 @@ const configSchema = object({
             "pageSize": _default(number(), 25),
             "availableSizes": _default(array(number()), [10, 25, 50, 100]),
             "style": _default(_enum(["standard", "simple"]), "standard"),
-        }))
+        })),
+        "search": optional(object({
+            "active": _default(boolean(), false),
+        })),
     })),
 });
 
@@ -1217,11 +1220,11 @@ class EventDispatcher {
 
 const responseSchema = object({
     "total": number(),
-    "total_filtered": number(),
+    "totalFiltered": number(),
     "pagination": object({
         "page": number(),
-        "page_size": number(),
-        "total_pages": number(),
+        "pageSize": number(),
+        "totalPages": number(),
     }),
     "data": array(array(object({
         "column": string(),
@@ -1590,7 +1593,7 @@ class PaginationComponent extends Component {
                     // Create the pagination object, dispatch event and refresh data
                     let pagination = {
                         page: data.pagination.page - 1,
-                        pageSize: data.pagination.page_size
+                        pageSize: data.pagination.pageSize
                     };
                     this._eventDispatcher.dispatch("pagination-change", pagination);
                     this._client.pagination = pagination;
@@ -1603,17 +1606,17 @@ class PaginationComponent extends Component {
             className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
             attributes: this._config.elements?.pagination?.button?.next?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
-            disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null
+            disabled: data.pagination.page === data.pagination.totalPages ? "disabled" : null
         });
         nextButtonElement.addEventListener("click", () => {
             if (!this._isLoading) {
-                if (data.pagination.page < data.pagination.total_pages) {
+                if (data.pagination.page < data.pagination.totalPages) {
                     if (this._config.debug)
                         console.info(`[Pagination Component] Moving to the next page`);
                     // Create the pagination object, dispatch event and refresh data
                     let pagination = {
                         page: data.pagination.page + 1,
-                        pageSize: data.pagination.page_size
+                        pageSize: data.pagination.pageSize
                     };
                     this._eventDispatcher.dispatch("pagination-change", pagination);
                     this._client.pagination = pagination;
@@ -1644,10 +1647,10 @@ class PaginationComponent extends Component {
                         // Create the pagination object, dispatch event and refresh data
                         let pagination = {
                             page: pageNumber,
-                            pageSize: data.pagination.page_size
+                            pageSize: data.pagination.pageSize
                         };
                         this._eventDispatcher.dispatch("pagination-change", pagination);
-                        this._client.pagination = { page: pageNumber, pageSize: data.pagination.page_size };
+                        this._client.pagination = { page: pageNumber, pageSize: data.pagination.pageSize };
                         this._client.refresh();
                     }
                 });
@@ -1675,13 +1678,13 @@ class PaginationComponent extends Component {
             // Example: 1 .. 4 5 6 .. 20
             // Example: 1 .. 16 17 18 19 20
             if (data.pagination.page < 5) {
-                for (let i = 2; i <= Math.min(5, data.pagination.total_pages - 1); i++) {
+                for (let i = 2; i <= Math.min(5, data.pagination.totalPages - 1); i++) {
                     const buttonElement = createButtonElement(i, i === data.pagination.page);
                     this._elements.container?.appendChild(buttonElement);
                 }
             }
-            else if (data.pagination.page > data.pagination.total_pages - 4) {
-                for (let i = Math.max(data.pagination.total_pages - 4, 2); i <= data.pagination.total_pages - 1; i++) {
+            else if (data.pagination.page > data.pagination.totalPages - 4) {
+                for (let i = Math.max(data.pagination.totalPages - 4, 2); i <= data.pagination.totalPages - 1; i++) {
                     const buttonElement = createButtonElement(i, i === data.pagination.page);
                     this._elements.container?.appendChild(buttonElement);
                 }
@@ -1693,12 +1696,12 @@ class PaginationComponent extends Component {
                 }
             }
             // Add ellipsis before the last page if needed
-            if (data.pagination.page <= data.pagination.total_pages - 4) {
+            if (data.pagination.page <= data.pagination.totalPages - 4) {
                 this._elements.container?.appendChild(createEllipsisElement());
             }
             // Show the last page button when there are more pages than 1
-            if (data.pagination.total_pages > 1) {
-                const lastButton = createButtonElement(data.pagination.total_pages, data.pagination.total_pages === data.pagination.page);
+            if (data.pagination.totalPages > 1) {
+                const lastButton = createButtonElement(data.pagination.totalPages, data.pagination.totalPages === data.pagination.page);
                 this._elements.container?.appendChild(lastButton);
             }
         }
@@ -1725,7 +1728,6 @@ class SearchComponent extends Component {
         });
         const inputElement = createElement("input", {
             type: "text",
-            name: "at-search-input",
             className: this._config.elements?.search?.input?.className,
             attributes: this._config.elements?.search?.input?.attributes,
         });
@@ -1794,13 +1796,14 @@ class FetchTable {
         this._eventDispatcher = new EventDispatcher();
         this._client = new Client(this._config, this._eventDispatcher);
         // Register components
-        this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
+        if (this._config.components?.search?.active === true) {
+            this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
+        }
         if (this._config.components?.pagination?.active === true) {
             this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
             this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
         }
-        // this._client.refresh();
     }
     /**
      * Shortcut for register an event listener for the specified event type.
@@ -1810,6 +1813,25 @@ class FetchTable {
      */
     on(event, callback) {
         this._eventDispatcher.register(event, callback, 1000);
+    }
+    /**
+     * Retrieves the current configuration settings.
+     */
+    get config() {
+        return this._config;
+    }
+    /**
+     * Retrieves the event dispatcher instance.
+     * The event dispatcher is responsible for managing event listeners and dispatching events.
+     */
+    get eventDispatcher() {
+        return this._eventDispatcher;
+    }
+    /**
+     * Retrieves the current HTTP client instance.
+     */
+    get client() {
+        return this._client;
     }
     /**
      * Refreshes the data displayed in the table component.

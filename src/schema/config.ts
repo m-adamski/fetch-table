@@ -129,7 +129,10 @@ export const configSchema = z.object({
             "pageSize": z._default(z.number(), 25),
             "availableSizes": z._default(z.array(z.number()), [10, 25, 50, 100]),
             "style": z._default(z.enum(["standard", "simple"]), "standard"),
-        }))
+        })),
+        "search": z.optional(z.object({
+            "active": z._default(z.boolean(), false),
+        })),
     })),
 });
 

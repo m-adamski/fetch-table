@@ -118,7 +118,7 @@ export default class PaginationComponent extends Component {
                     // Create the pagination object, dispatch event and refresh data
                     let pagination: Pagination = {
                         page: data.pagination.page - 1,
-                        pageSize: data.pagination.page_size
+                        pageSize: data.pagination.pageSize
                     };
 
                     this._eventDispatcher.dispatch("pagination-change", pagination);
@@ -133,18 +133,18 @@ export default class PaginationComponent extends Component {
             className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
             attributes: this._config.elements?.pagination?.button?.next?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
-            disabled: data.pagination.page === data.pagination.total_pages ? "disabled" : null
+            disabled: data.pagination.page === data.pagination.totalPages ? "disabled" : null
         });
 
         nextButtonElement.addEventListener("click", () => {
             if (!this._isLoading) {
-                if (data.pagination.page < data.pagination.total_pages) {
+                if (data.pagination.page < data.pagination.totalPages) {
                     if (this._config.debug) console.info(`[Pagination Component] Moving to the next page`);
 
                     // Create the pagination object, dispatch event and refresh data
                     let pagination: Pagination = {
                         page: data.pagination.page + 1,
-                        pageSize: data.pagination.page_size
+                        pageSize: data.pagination.pageSize
                     }
 
                     this._eventDispatcher.dispatch("pagination-change", pagination);
@@ -180,11 +180,11 @@ export default class PaginationComponent extends Component {
                         // Create the pagination object, dispatch event and refresh data
                         let pagination: Pagination = {
                             page: pageNumber,
-                            pageSize: data.pagination.page_size
+                            pageSize: data.pagination.pageSize
                         };
 
                         this._eventDispatcher.dispatch("pagination-change", pagination);
-                        this._client.pagination = { page: pageNumber, pageSize: data.pagination.page_size };
+                        this._client.pagination = { page: pageNumber, pageSize: data.pagination.pageSize };
                         this._client.refresh();
                     }
                 });
@@ -217,12 +217,12 @@ export default class PaginationComponent extends Component {
             // Example: 1 .. 4 5 6 .. 20
             // Example: 1 .. 16 17 18 19 20
             if (data.pagination.page < 5) {
-                for (let i = 2; i <= Math.min(5, data.pagination.total_pages - 1); i++) {
+                for (let i = 2; i <= Math.min(5, data.pagination.totalPages - 1); i++) {
                     const buttonElement = createButtonElement(i, i === data.pagination.page);
                     this._elements.container?.appendChild(buttonElement);
                 }
-            } else if (data.pagination.page > data.pagination.total_pages - 4) {
-                for (let i = Math.max(data.pagination.total_pages - 4, 2); i <= data.pagination.total_pages - 1; i++) {
+            } else if (data.pagination.page > data.pagination.totalPages - 4) {
+                for (let i = Math.max(data.pagination.totalPages - 4, 2); i <= data.pagination.totalPages - 1; i++) {
                     const buttonElement = createButtonElement(i, i === data.pagination.page);
                     this._elements.container?.appendChild(buttonElement);
                 }
@@ -234,13 +234,13 @@ export default class PaginationComponent extends Component {
             }
 
             // Add ellipsis before the last page if needed
-            if (data.pagination.page <= data.pagination.total_pages - 4) {
+            if (data.pagination.page <= data.pagination.totalPages - 4) {
                 this._elements.container?.appendChild(createEllipsisElement());
             }
 
             // Show the last page button when there are more pages than 1
-            if (data.pagination.total_pages > 1) {
-                const lastButton = createButtonElement(data.pagination.total_pages, data.pagination.total_pages === data.pagination.page);
+            if (data.pagination.totalPages > 1) {
+                const lastButton = createButtonElement(data.pagination.totalPages, data.pagination.totalPages === data.pagination.page);
                 this._elements.container?.appendChild(lastButton);
             }
         }

@@ -2,11 +2,11 @@ import { z } from "zod/mini";
 
 export const responseSchema = z.object({
     "total": z.number(),
-    "total_filtered": z.number(),
+    "totalFiltered": z.number(),
     "pagination": z.object({
         "page": z.number(),
-        "page_size": z.number(),
-        "total_pages": z.number(),
+        "pageSize": z.number(),
+        "totalPages": z.number(),
     }),
     "data": z.array(
         z.array(
