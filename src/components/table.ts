@@ -1,14 +1,14 @@
 import Component from "./component";
 import { ConfigSchema } from "../schema/config";
 import { ResponseSchema } from "../schema/response";
-import { ColumnSchema } from "../schema/column";
+import { Sort } from "../interfaces/sort";
 import { createElement } from "../utils/create-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
 export default class TableComponent extends Component {
     private _isLoading: boolean = false;
-    private _sort: { column: ColumnSchema, direction: "ASC" | "DESC" } | null = null;
+    private _sort: Sort | null = null;
     private _elements: { table: HTMLElement | null, head: HTMLElement | null, body: HTMLElement | null } = {
         table: null,
         head: null,
@@ -57,7 +57,8 @@ export default class TableComponent extends Component {
             attributes: this._config.elements?.table?.tableHead?.tableRow?.attributes,
         });
 
-        this._config.columns.forEach(column => {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries
+        for (const [name, column] of Object.entries(this._config.columns)) {
             const columnElement = createElement("th", {
                 scope: "col",
                 className: column.className || this._config.elements?.table?.tableHead?.tableCell?.className,
@@ -68,16 +69,16 @@ export default class TableComponent extends Component {
             if (column.sortable) {
                 columnElement.addEventListener("click", () => {
                     if (!this._isLoading) {
-                        if (this._config.debug) console.info(`[Table Component] Sort by the column: ${ column.name }`);
+                        if (this._config.debug) console.info(`[Table Component] Sort by the column: ${ name }`);
 
                         // Update sort object, dispatch event and refresh data
                         if (this._sort === null) {
-                            this._sort = { column: column, direction: "ASC" };
+                            this._sort = { columnName: name, direction: "ASC" };
                         } else {
-                            if (this._sort.column.name === column.name) {
+                            if (this._sort.columnName === name) {
                                 this._sort.direction = this._sort.direction === "ASC" ? "DESC" : "ASC";
                             } else {
-                                this._sort = { column: column, direction: "ASC" };
+                                this._sort = { columnName: name, direction: "ASC" };
                             }
                         }
 
@@ -89,7 +90,7 @@ export default class TableComponent extends Component {
             }
 
             columnRowElement.appendChild(columnElement);
-        });
+        }
 
         this._elements.head.appendChild(columnRowElement);
         this._elements.table.appendChild(this._elements.head);
@@ -138,13 +139,14 @@ export default class TableComponent extends Component {
                     attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
                 });
 
-                this._config.columns.forEach(column => {
+                // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries
+                for (const [name, column] of Object.entries(this._config.columns)) {
                     const item = dataItem.find(function (item) {
-                        return item.column === column.name;
+                        return item.column === name;
                     });
 
                     if (item === undefined) {
-                        throw new Error(`[Table Component] Column ${ column.name } not found`);
+                        throw new Error(`[Table Component] Column ${ name } not found`);
                     }
 
                     const columnElement = createElement("td", {
@@ -160,7 +162,7 @@ export default class TableComponent extends Component {
                     }
 
                     rowElement.appendChild(columnElement);
-                });
+                }
 
                 this._elements.body?.appendChild(rowElement);
             });

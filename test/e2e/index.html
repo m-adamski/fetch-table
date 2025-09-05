@@ -47,36 +47,32 @@
                 const fetchTable = new FetchTable("#table", {
                     ajaxURL: "/ajax-data",
                     debug: true,
-                    columns: [
-                        {
-                            name: "firstName",
+                    columns: {
+                        firstName: {
                             type: "text",
                             label: "First Name",
                             sortable: true,
                             searchable: true,
                         },
-                        {
-                            name: "lastName",
+                        lastName: {
                             type: "text",
                             label: "Last Name",
                             sortable: true,
                             searchable: true,
                         },
-                        {
-                            name: "type",
+                        type: {
                             type: "text",
                             label: "Account type",
                             sortable: true,
                             searchable: true,
                         },
-                        {
-                            name: "emailAddress",
+                        emailAddress: {
                             type: "text",
                             label: "Email address",
                             sortable: true,
                             searchable: true,
-                        },
-                    ],
+                        }
+                    },
                     elements: {
                         container: {
                             header: {
@@ -149,12 +145,14 @@
                         }
                     },
                     components: {
-                        search: {
-                            active: false,
-                        },
                         pagination: {
+                            active: false,
+                            pageSize: 20,
+                            availableSizes: [ 10, 20, 50, 100 ],
+                            style: "standard"
+                        },
+                        search: {
                             active: true,
-                            pageSize: 10,
                         },
                     }
                 });

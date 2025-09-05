@@ -1,6 +1,4 @@
-import { ColumnSchema } from "../schema/column";
-
 export interface Sort {
-    column: ColumnSchema,
+    columnName: string,
     direction: "ASC" | "DESC"
 }

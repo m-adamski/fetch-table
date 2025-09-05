@@ -3,13 +3,13 @@ import { columnSchema } from "./column";
 
 export const configSchema = z.object({
     "ajaxURL": z.string(),
-    "ajaxMethod": z._default(z.enum(["GET", "POST"]), "GET"),
     "ajaxHeaders": z._default(z.record(z.string(), z.string()), {
         "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
         "X-Requested-By": "fetch-table"
     }),
     "debug": z._default(z.boolean(), false),
-    "columns": z.array(columnSchema),
+    "columns": z.record(z.string(), columnSchema), // z.array(columnSchema),
     "elements": z.optional(z.object({
         "container": z.optional(z.object({
             "container": z.optional(z.object({
@@ -123,17 +123,17 @@ export const configSchema = z.object({
             }))
         })),
     })),
-    "components": z.optional(z.object({
-        "pagination": z.optional(z.object({
-            "active": z._default(z.boolean(), false),
-            "pageSize": z._default(z.number(), 25),
-            "availableSizes": z._default(z.array(z.number()), [10, 25, 50, 100]),
-            "style": z._default(z.enum(["standard", "simple"]), "standard"),
-        })),
-        "search": z.optional(z.object({
-            "active": z._default(z.boolean(), false),
-        })),
-    })),
+    "components": z.object({
+        "pagination": z.object({
+            "active": z.boolean(),
+            "pageSize": z.number(),
+            "availableSizes": z.array(z.number()),
+            "style": z.enum(["standard", "simple"]),
+        }),
+        "search": z.object({
+            "active": z.boolean(),
+        }),
+    }),
 });
 
 export type ConfigSchema = z.infer<typeof configSchema>;

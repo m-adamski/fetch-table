@@ -121,27 +121,10 @@
             configurable: true,
         });
     }
-    function esc(str) {
-        return JSON.stringify(str);
-    }
     const captureStackTrace = ("captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => { });
     function isObject(data) {
         return typeof data === "object" && data !== null && !Array.isArray(data);
     }
-    const allowsEval = cached(() => {
-        // @ts-ignore
-        if (typeof navigator !== "undefined" && navigator?.userAgent?.includes("Cloudflare")) {
-            return false;
-        }
-        try {
-            const F = Function;
-            new F("");
-            return true;
-        }
-        catch (_) {
-            return false;
-        }
-    });
     function isPlainObject(o) {
         if (isObject(o) === false)
             return false;
@@ -158,6 +141,11 @@
             return false;
         }
         return true;
+    }
+    function shallowClone(o) {
+        if (isPlainObject(o))
+            return { ...o };
+        return o;
     }
     const propertyKeyTypes = new Set(["string", "number", "symbol"]);
     function escapeRegex(str) {
@@ -180,6 +168,8 @@
     }
     // invalid_type | too_big | too_small | invalid_format | not_multiple_of | unrecognized_keys | invalid_union | invalid_key | invalid_element | invalid_value | custom
     function aborted(x, startIndex = 0) {
+        if (x.aborted === true)
+            return true;
         for (let i = startIndex; i < x.issues.length; i++) {
             if (x.issues[i]?.continue !== true) {
                 return true;
@@ -299,46 +289,10 @@
     const number$1 = /^-?\d+(?:\.\d+)?/i;
     const boolean$1 = /true|false/i;
 
-    class Doc {
-        constructor(args = []) {
-            this.content = [];
-            this.indent = 0;
-            if (this)
-                this.args = args;
-        }
-        indented(fn) {
-            this.indent += 1;
-            fn(this);
-            this.indent -= 1;
-        }
-        write(arg) {
-            if (typeof arg === "function") {
-                arg(this, { execution: "sync" });
-                arg(this, { execution: "async" });
-                return;
-            }
-            const content = arg;
-            const lines = content.split("\n").filter((x) => x);
-            const minIndent = Math.min(...lines.map((x) => x.length - x.trimStart().length));
-            const dedented = lines.map((x) => x.slice(minIndent)).map((x) => " ".repeat(this.indent * 2) + x);
-            for (const line of dedented) {
-                this.content.push(line);
-            }
-        }
-        compile() {
-            const F = Function;
-            const args = this?.args;
-            const content = this?.content ?? [``];
-            const lines = [...content.map((x) => `  ${x}`)];
-            // console.log(lines.join("\n"));
-            return new F(...args, lines.join("\n"));
-        }
-    }
-
     const version = {
         major: 4,
-        minor: 0,
-        patch: 15,
+        minor: 1,
+        patch: 5,
     };
 
     const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
@@ -352,7 +306,6 @@
         if (inst._zod.traits.has("$ZodCheck")) {
             checks.unshift(inst);
         }
-        //
         for (const ch of checks) {
             for (const fn of ch._zod.onattach) {
                 fn(inst);
@@ -409,7 +362,47 @@
                 }
                 return payload;
             };
+            // const handleChecksResult = (
+            //   checkResult: ParsePayload,
+            //   originalResult: ParsePayload,
+            //   ctx: ParseContextInternal
+            // ): util.MaybeAsync<ParsePayload> => {
+            //   // if the checks mutated the value && there are no issues, re-parse the result
+            //   if (checkResult.value !== originalResult.value && !checkResult.issues.length)
+            //     return inst._zod.parse(checkResult, ctx);
+            //   return originalResult;
+            // };
+            const handleCanaryResult = (canary, payload, ctx) => {
+                // abort if the canary is aborted
+                if (aborted(canary)) {
+                    canary.aborted = true;
+                    return canary;
+                }
+                // run checks first, then
+                const checkResult = runChecks(payload, checks, ctx);
+                if (checkResult instanceof Promise) {
+                    if (ctx.async === false)
+                        throw new $ZodAsyncError();
+                    return checkResult.then((checkResult) => inst._zod.parse(checkResult, ctx));
+                }
+                return inst._zod.parse(checkResult, ctx);
+            };
             inst._zod.run = (payload, ctx) => {
+                if (ctx.skipChecks) {
+                    return inst._zod.parse(payload, ctx);
+                }
+                if (ctx.direction === "backward") {
+                    // run canary
+                    // initial pass (no checks)
+                    const canary = inst._zod.parse({ value: payload.value, issues: [] }, { ...ctx, skipChecks: true });
+                    if (canary instanceof Promise) {
+                        return canary.then((canary) => {
+                            return handleCanaryResult(canary, payload, ctx);
+                        });
+                    }
+                    return handleCanaryResult(canary, payload, ctx);
+                }
+                // forward
                 const result = inst._zod.parse(payload, ctx);
                 if (result instanceof Promise) {
                     if (ctx.async === false)
@@ -557,25 +550,61 @@
             final.value[key] = result.value;
         }
     }
+    function normalizeDef(def) {
+        const keys = Object.keys(def.shape);
+        for (const k of keys) {
+            if (!def.shape[k]._zod.traits.has("$ZodType")) {
+                throw new Error(`Invalid element at key "${k}": expected a Zod schema`);
+            }
+        }
+        const okeys = optionalKeys(def.shape);
+        return {
+            ...def,
+            keys,
+            keySet: new Set(keys),
+            numKeys: keys.length,
+            optionalKeys: new Set(okeys),
+        };
+    }
+    function handleCatchall(proms, input, payload, ctx, def, inst) {
+        const unrecognized = [];
+        // iterate over input keys
+        const keySet = def.keySet;
+        const _catchall = def.catchall._zod;
+        const t = _catchall.def.type;
+        for (const key of Object.keys(input)) {
+            if (keySet.has(key))
+                continue;
+            if (t === "never") {
+                unrecognized.push(key);
+                continue;
+            }
+            const r = _catchall.run({ value: input[key], issues: [] }, ctx);
+            if (r instanceof Promise) {
+                proms.push(r.then((r) => handlePropertyResult(r, payload, key, input)));
+            }
+            else {
+                handlePropertyResult(r, payload, key, input);
+            }
+        }
+        if (unrecognized.length) {
+            payload.issues.push({
+                code: "unrecognized_keys",
+                keys: unrecognized,
+                input,
+                inst,
+            });
+        }
+        if (!proms.length)
+            return payload;
+        return Promise.all(proms).then(() => {
+            return payload;
+        });
+    }
     const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
         // requires cast because technically $ZodObject doesn't extend
         $ZodType.init(inst, def);
-        const _normalized = cached(() => {
-            const keys = Object.keys(def.shape);
-            for (const k of keys) {
-                if (!(def.shape[k] instanceof $ZodType)) {
-                    throw new Error(`Invalid element at key "${k}": expected a Zod schema`);
-                }
-            }
-            const okeys = optionalKeys(def.shape);
-            return {
-                shape: def.shape,
-                keys,
-                keySet: new Set(keys),
-                numKeys: keys.length,
-                optionalKeys: new Set(okeys),
-            };
-        });
+        const _normalized = cached(() => normalizeDef(def));
         defineLazy(inst._zod, "propValues", () => {
             const shape = def.shape;
             const propValues = {};
@@ -589,52 +618,7 @@
             }
             return propValues;
         });
-        const generateFastpass = (shape) => {
-            const doc = new Doc(["shape", "payload", "ctx"]);
-            const normalized = _normalized.value;
-            const parseStr = (key) => {
-                const k = esc(key);
-                return `shape[${k}]._zod.run({ value: input[${k}], issues: [] }, ctx)`;
-            };
-            doc.write(`const input = payload.value;`);
-            const ids = Object.create(null);
-            let counter = 0;
-            for (const key of normalized.keys) {
-                ids[key] = `key_${counter++}`;
-            }
-            // A: preserve key order {
-            doc.write(`const newResult = {}`);
-            for (const key of normalized.keys) {
-                const id = ids[key];
-                const k = esc(key);
-                doc.write(`const ${id} = ${parseStr(key)};`);
-                doc.write(`
-        if (${id}.issues.length) {
-          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
-            ...iss,
-            path: iss.path ? [${k}, ...iss.path] : [${k}]
-          })));
-        }
-        
-        if (${id}.value === undefined) {
-          if (${k} in input) {
-            newResult[${k}] = undefined;
-          }
-        } else {
-          newResult[${k}] = ${id}.value;
-        }
-      `);
-            }
-            doc.write(`payload.value = newResult;`);
-            doc.write(`return payload;`);
-            const fn = doc.compile();
-            return (payload, ctx) => fn(shape, payload, ctx);
-        };
-        let fastpass;
         const isObject$1 = isObject;
-        const jit = !globalConfig.jitless;
-        const allowsEval$1 = allowsEval;
-        const fastEnabled = jit && allowsEval$1.value; // && !def.catchall;
         const catchall = def.catchall;
         let value;
         inst._zod.parse = (payload, ctx) => {
@@ -649,43 +633,12 @@
                 });
                 return payload;
             }
+            payload.value = {};
             const proms = [];
-            if (jit && fastEnabled && ctx?.async === false && ctx.jitless !== true) {
-                // always synchronous
-                if (!fastpass)
-                    fastpass = generateFastpass(def.shape);
-                payload = fastpass(payload, ctx);
-            }
-            else {
-                payload.value = {};
-                const shape = value.shape;
-                for (const key of value.keys) {
-                    const el = shape[key];
-                    const r = el._zod.run({ value: input[key], issues: [] }, ctx);
-                    if (r instanceof Promise) {
-                        proms.push(r.then((r) => handlePropertyResult(r, payload, key, input)));
-                    }
-                    else {
-                        handlePropertyResult(r, payload, key, input);
-                    }
-                }
-            }
-            if (!catchall) {
-                return proms.length ? Promise.all(proms).then(() => payload) : payload;
-            }
-            const unrecognized = [];
-            // iterate over input keys
-            const keySet = value.keySet;
-            const _catchall = catchall._zod;
-            const t = _catchall.def.type;
-            for (const key of Object.keys(input)) {
-                if (keySet.has(key))
-                    continue;
-                if (t === "never") {
-                    unrecognized.push(key);
-                    continue;
-                }
-                const r = _catchall.run({ value: input[key], issues: [] }, ctx);
+            const shape = value.shape;
+            for (const key of value.keys) {
+                const el = shape[key];
+                const r = el._zod.run({ value: input[key], issues: [] }, ctx);
                 if (r instanceof Promise) {
                     proms.push(r.then((r) => handlePropertyResult(r, payload, key, input)));
                 }
@@ -693,19 +646,10 @@
                     handlePropertyResult(r, payload, key, input);
                 }
             }
-            if (unrecognized.length) {
-                payload.issues.push({
-                    code: "unrecognized_keys",
-                    keys: unrecognized,
-                    input,
-                    inst,
-                });
+            if (!catchall) {
+                return proms.length ? Promise.all(proms).then(() => payload) : payload;
             }
-            if (!proms.length)
-                return payload;
-            return Promise.all(proms).then(() => {
-                return payload;
-            });
+            return handleCatchall(proms, input, payload, ctx, _normalized.value, inst);
         };
     });
     const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
@@ -863,13 +807,18 @@
         inst._zod.optin = "optional";
         defineLazy(inst._zod, "values", () => def.innerType._zod.values);
         inst._zod.parse = (payload, ctx) => {
+            if (ctx.direction === "backward") {
+                return def.innerType._zod.run(payload, ctx);
+            }
+            // Forward direction (decode): apply defaults for undefined input
             if (payload.value === undefined) {
                 payload.value = def.defaultValue;
                 /**
-                 * $ZodDefault always returns the default value immediately.
+                 * $ZodDefault returns the default value immediately in forward direction.
                  * It doesn't pass the default value into the validator ("prefault"). There's no reason to pass the default value through validation. The validity of the default is enforced by TypeScript statically. Otherwise, it's the responsibility of the user to ensure the default is valid. In the case of pipes with divergent in/out types, you can specify the default on the `in` schema of your ZodPipe to set a "prefault" for the pipe.   */
                 return payload;
             }
+            // Forward direction: continue with default handling
             const result = def.innerType._zod.run(payload, ctx);
             if (result instanceof Promise) {
                 return result.then((result) => handleDefaultResult(result, def));
@@ -909,6 +858,7 @@
             throw new Error("Uninitialized schema in ZodMiniType.");
         $ZodType.init(inst, def);
         inst.def = def;
+        inst.type = def.type;
         inst.parse = (data, params) => parse(inst, data, params, { callee: inst.parse });
         inst.safeParse = (data, params) => safeParse(inst, data, params);
         inst.parseAsync = async (data, params) => parseAsync(inst, data, params, { callee: inst.parseAsync });
@@ -994,6 +944,7 @@
     const ZodMiniEnum = /*@__PURE__*/ $constructor("ZodMiniEnum", (inst, def) => {
         $ZodEnum.init(inst, def);
         ZodMiniType.init(inst, def);
+        inst.options = Object.values(def.entries);
     });
     function _enum(values, params) {
         const entries = Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values;
@@ -1022,13 +973,12 @@
             type: "default",
             innerType: innerType,
             get defaultValue() {
-                return typeof defaultValue === "function" ? defaultValue() : defaultValue;
+                return typeof defaultValue === "function" ? defaultValue() : shallowClone(defaultValue);
             },
         });
     }
 
     const columnSchema = object({
-        "name": string(),
         "type": _enum(["text", "html"]),
         "label": string(),
         "className": optional(string()),
@@ -1038,13 +988,13 @@
 
     const configSchema = object({
         "ajaxURL": string(),
-        "ajaxMethod": _default(_enum(["GET", "POST"]), "GET"),
         "ajaxHeaders": _default(record(string(), string()), {
             "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
             "X-Requested-By": "fetch-table"
         }),
         "debug": _default(boolean(), false),
-        "columns": array(columnSchema),
+        "columns": record(string(), columnSchema), // z.array(columnSchema),
         "elements": optional(object({
             "container": optional(object({
                 "container": optional(object({
@@ -1158,17 +1108,17 @@
                 }))
             })),
         })),
-        "components": optional(object({
-            "pagination": optional(object({
-                "active": _default(boolean(), false),
-                "pageSize": _default(number(), 25),
-                "availableSizes": _default(array(number()), [10, 25, 50, 100]),
-                "style": _default(_enum(["standard", "simple"]), "standard"),
-            })),
-            "search": optional(object({
-                "active": _default(boolean(), false),
-            })),
-        })),
+        "components": object({
+            "pagination": object({
+                "active": boolean(),
+                "pageSize": number(),
+                "availableSizes": array(number()),
+                "style": _enum(["standard", "simple"]),
+            }),
+            "search": object({
+                "active": boolean(),
+            }),
+        }),
     });
 
     function createElement(tagName, options = {}) {
@@ -1225,8 +1175,6 @@
     }
 
     const responseSchema = object({
-        "total": number(),
-        "totalFiltered": number(),
         "pagination": object({
             "page": number(),
             "pageSize": number(),
@@ -1312,12 +1260,12 @@
          * @returns {Request}
          */
         generateRequest() {
-            const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
-            const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
-            return new Request(ajaxURL, {
-                method: this._config.ajaxMethod,
+            // const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
+            // const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
+            return new Request(this._config.ajaxURL, {
+                method: "POST",
                 headers: this._config.ajaxHeaders,
-                body: ajaxBody,
+                body: JSON.stringify(this.generateRequestBody()),
             });
         }
         /**
@@ -1350,7 +1298,7 @@
                 params.append("pagination-size", this._pagination.pageSize.toString());
             }
             if (this._sort !== null) {
-                params.append("sort-column", this._sort.column.name);
+                params.append("sort-column", this._sort.columnName);
                 params.append("sort-direction", this._sort.direction);
             }
             return params;
@@ -1408,7 +1356,8 @@
                 className: this._config.elements?.table?.tableHead?.tableRow?.className,
                 attributes: this._config.elements?.table?.tableHead?.tableRow?.attributes,
             });
-            this._config.columns.forEach(column => {
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries
+            for (const [name, column] of Object.entries(this._config.columns)) {
                 const columnElement = createElement("th", {
                     scope: "col",
                     className: column.className || this._config.elements?.table?.tableHead?.tableCell?.className,
@@ -1419,17 +1368,17 @@
                     columnElement.addEventListener("click", () => {
                         if (!this._isLoading) {
                             if (this._config.debug)
-                                console.info(`[Table Component] Sort by the column: ${column.name}`);
+                                console.info(`[Table Component] Sort by the column: ${name}`);
                             // Update sort object, dispatch event and refresh data
                             if (this._sort === null) {
-                                this._sort = { column: column, direction: "ASC" };
+                                this._sort = { columnName: name, direction: "ASC" };
                             }
                             else {
-                                if (this._sort.column.name === column.name) {
+                                if (this._sort.columnName === name) {
                                     this._sort.direction = this._sort.direction === "ASC" ? "DESC" : "ASC";
                                 }
                                 else {
-                                    this._sort = { column: column, direction: "ASC" };
+                                    this._sort = { columnName: name, direction: "ASC" };
                                 }
                             }
                             this._eventDispatcher.dispatch("sort-change", this._sort);
@@ -1439,7 +1388,7 @@
                     });
                 }
                 columnRowElement.appendChild(columnElement);
-            });
+            }
             this._elements.head.appendChild(columnRowElement);
             this._elements.table.appendChild(this._elements.head);
             this._elements.table.appendChild(this._elements.body);
@@ -1481,12 +1430,13 @@
                         className: this._config.elements?.table?.tableBody?.tableRow?.className,
                         attributes: this._config.elements?.table?.tableBody?.tableRow?.attributes,
                     });
-                    this._config.columns.forEach(column => {
+                    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/entries
+                    for (const [name, column] of Object.entries(this._config.columns)) {
                         const item = dataItem.find(function (item) {
-                            return item.column === column.name;
+                            return item.column === name;
                         });
                         if (item === undefined) {
-                            throw new Error(`[Table Component] Column ${column.name} not found`);
+                            throw new Error(`[Table Component] Column ${name} not found`);
                         }
                         const columnElement = createElement("td", {
                             className: item.className || this._config.elements?.table?.tableBody?.tableCell?.className,
@@ -1500,7 +1450,7 @@
                             columnElement.innerHTML = item.value;
                         }
                         rowElement.appendChild(columnElement);
-                    });
+                    }
                     this._elements.body?.appendChild(rowElement);
                 });
             }

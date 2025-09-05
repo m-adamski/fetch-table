@@ -90,13 +90,13 @@ export default class Client {
      * @returns {Request}
      */
     private generateRequest(): Request {
-        const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
-        const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
+        // const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
+        // const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
 
-        return new Request(ajaxURL, {
-            method: this._config.ajaxMethod,
+        return new Request(this._config.ajaxURL, {
+            method: "POST",
             headers: this._config.ajaxHeaders,
-            body: ajaxBody,
+            body: JSON.stringify(this.generateRequestBody()),
         });
     }
 
@@ -134,7 +134,7 @@ export default class Client {
         }
 
         if (this._sort !== null) {
-            params.append("sort-column", this._sort.column.name);
+            params.append("sort-column", this._sort.columnName);
             params.append("sort-direction", this._sort.direction);
         }
 
