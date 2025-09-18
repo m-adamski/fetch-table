@@ -90,13 +90,13 @@ export default class Client {
      * @returns {Request}
      */
     private generateRequest(): Request {
-        // const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
-        // const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
+        const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
+        const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
 
-        return new Request(this._config.ajaxURL, {
-            method: "POST",
+        return new Request(ajaxURL, {
+            method: this._config.ajaxMethod,
             headers: this._config.ajaxHeaders,
-            body: JSON.stringify(this.generateRequestBody()),
+            body: ajaxBody,
         });
     }
 
@@ -105,12 +105,36 @@ export default class Client {
      *
      * @private
      */
-    private generateRequestBody(): { pagination: Pagination | null, sort: Sort | null, search: string | null } {
-        return {
-            sort: this._sort,
-            search: this._search,
-            pagination: this._pagination
+    private generateRequestBody(): {
+        search?: string,
+        pagination?: { page: number, size: number },
+        sort?: { column: string, direction: string }
+    } {
+        let requestBody: {
+            search?: string,
+            pagination?: { page: number, size: number },
+            sort?: { column: string, direction: string }
+        } = {};
+
+        if (this._search !== null) {
+            requestBody = { ...requestBody, search: this._search };
         }
+
+        if (this._pagination !== null) {
+            requestBody = {
+                ...requestBody,
+                pagination: { page: this._pagination.page, size: this._pagination.pageSize }
+            };
+        }
+
+        if (this._sort !== null) {
+            requestBody = {
+                ...requestBody,
+                sort: { column: this._sort.columnName, direction: this._sort.direction }
+            };
+        }
+
+        return requestBody;
     }
 
     /**
@@ -129,13 +153,13 @@ export default class Client {
         }
 
         if (this._pagination !== null) {
-            params.append("pagination-page", this._pagination.page.toString());
-            params.append("pagination-size", this._pagination.pageSize.toString());
+            params.append("pagination[page]", this._pagination.page.toString());
+            params.append("pagination[size]", this._pagination.pageSize.toString());
         }
 
         if (this._sort !== null) {
-            params.append("sort-column", this._sort.columnName);
-            params.append("sort-direction", this._sort.direction);
+            params.append("sort[column]", this._sort.columnName);
+            params.append("sort[direction]", this._sort.direction);
         }
 
         return params;

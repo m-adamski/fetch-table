@@ -145,6 +145,8 @@
     function shallowClone(o) {
         if (isPlainObject(o))
             return { ...o };
+        if (Array.isArray(o))
+            return [...o];
         return o;
     }
     const propertyKeyTypes = new Set(["string", "number", "symbol"]);
@@ -286,13 +288,13 @@
         const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
         return new RegExp(`^${regex}$`);
     };
-    const number$1 = /^-?\d+(?:\.\d+)?/i;
-    const boolean$1 = /true|false/i;
+    const number$1 = /^-?\d+(?:\.\d+)?/;
+    const boolean$1 = /^(?:true|false)$/i;
 
     const version = {
         major: 4,
         minor: 1,
-        patch: 5,
+        patch: 9,
     };
 
     const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
@@ -553,7 +555,7 @@
     function normalizeDef(def) {
         const keys = Object.keys(def.shape);
         for (const k of keys) {
-            if (!def.shape[k]._zod.traits.has("$ZodType")) {
+            if (!def.shape?.[k]?._zod?.traits?.has("$ZodType")) {
                 throw new Error(`Invalid element at key "${k}": expected a Zod schema`);
             }
         }
@@ -988,6 +990,7 @@
 
     const configSchema = object({
         "ajaxURL": string(),
+        "ajaxMethod": _enum(["GET", "POST"]),
         "ajaxHeaders": _default(record(string(), string()), {
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
@@ -1175,11 +1178,11 @@
     }
 
     const responseSchema = object({
-        "pagination": object({
+        "pagination": optional(object({
             "page": number(),
             "pageSize": number(),
             "totalPages": number(),
-        }),
+        })),
         "data": array(array(object({
             "column": string(),
             "className": optional(string()),
@@ -1260,12 +1263,12 @@
          * @returns {Request}
          */
         generateRequest() {
-            // const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
-            // const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
-            return new Request(this._config.ajaxURL, {
-                method: "POST",
+            const ajaxURL = this._config.ajaxMethod === "GET" ? this._config.ajaxURL + "?" + this.generateURLSearchParams() : this._config.ajaxURL;
+            const ajaxBody = this._config.ajaxMethod === "POST" ? JSON.stringify(this.generateRequestBody()) : null;
+            return new Request(ajaxURL, {
+                method: this._config.ajaxMethod,
                 headers: this._config.ajaxHeaders,
-                body: JSON.stringify(this.generateRequestBody()),
+                body: ajaxBody,
             });
         }
         /**
@@ -1274,11 +1277,23 @@
          * @private
          */
         generateRequestBody() {
-            return {
-                sort: this._sort,
-                search: this._search,
-                pagination: this._pagination
-            };
+            let requestBody = {};
+            if (this._search !== null) {
+                requestBody = { ...requestBody, search: this._search };
+            }
+            if (this._pagination !== null) {
+                requestBody = {
+                    ...requestBody,
+                    pagination: { page: this._pagination.page, size: this._pagination.pageSize }
+                };
+            }
+            if (this._sort !== null) {
+                requestBody = {
+                    ...requestBody,
+                    sort: { column: this._sort.columnName, direction: this._sort.direction }
+                };
+            }
+            return requestBody;
         }
         /**
          * Generates and returns URL search parameters based on the current pagination and sort settings.
@@ -1294,12 +1309,12 @@
                 params.append("search", this._search);
             }
             if (this._pagination !== null) {
-                params.append("pagination-page", this._pagination.page.toString());
-                params.append("pagination-size", this._pagination.pageSize.toString());
+                params.append("pagination[page]", this._pagination.page.toString());
+                params.append("pagination[size]", this._pagination.pageSize.toString());
             }
             if (this._sort !== null) {
-                params.append("sort-column", this._sort.columnName);
-                params.append("sort-direction", this._sort.direction);
+                params.append("sort[column]", this._sort.columnName);
+                params.append("sort[direction]", this._sort.direction);
             }
             return params;
         }
@@ -1533,23 +1548,30 @@
             if (this._elements.container === null) {
                 throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method");
             }
+            // Internal function to get the pagination data from the response
+            const paginationData = () => {
+                if (data.pagination === undefined) {
+                    throw new Error("[Pagination Component] Pagination data is missing. Please check your API response");
+                }
+                return data.pagination;
+            };
             this._elements.container.innerText = "";
             const previousButtonElement = createElement("button", {
                 className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
                 attributes: this._config.elements?.pagination?.button?.previous?.attributes,
                 innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
-                disabled: data.pagination.page === 1 ? "disabled" : null,
+                disabled: paginationData().page === 1 ? "disabled" : null,
                 type: "button"
             });
             previousButtonElement.addEventListener("click", () => {
                 if (!this._isLoading) {
-                    if (data.pagination.page > 1) {
+                    if (paginationData().page > 1) {
                         if (this._config.debug)
                             console.info(`[Pagination Component] Moving to the previous page`);
                         // Create the pagination object, dispatch event and refresh data
                         let pagination = {
-                            page: data.pagination.page - 1,
-                            pageSize: data.pagination.pageSize
+                            page: paginationData().page - 1,
+                            pageSize: paginationData().pageSize
                         };
                         this._eventDispatcher.dispatch("pagination-change", pagination);
                         this._client.pagination = pagination;
@@ -1562,17 +1584,17 @@
                 className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
                 attributes: this._config.elements?.pagination?.button?.next?.attributes,
                 innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
-                disabled: data.pagination.page === data.pagination.totalPages ? "disabled" : null
+                disabled: paginationData().page === paginationData().totalPages ? "disabled" : null
             });
             nextButtonElement.addEventListener("click", () => {
                 if (!this._isLoading) {
-                    if (data.pagination.page < data.pagination.totalPages) {
+                    if (paginationData().page < paginationData().totalPages) {
                         if (this._config.debug)
                             console.info(`[Pagination Component] Moving to the next page`);
                         // Create the pagination object, dispatch event and refresh data
                         let pagination = {
-                            page: data.pagination.page + 1,
-                            pageSize: data.pagination.pageSize
+                            page: paginationData().page + 1,
+                            pageSize: paginationData().pageSize
                         };
                         this._eventDispatcher.dispatch("pagination-change", pagination);
                         this._client.pagination = pagination;
@@ -1603,10 +1625,10 @@
                             // Create the pagination object, dispatch event and refresh data
                             let pagination = {
                                 page: pageNumber,
-                                pageSize: data.pagination.pageSize
+                                pageSize: paginationData().pageSize
                             };
                             this._eventDispatcher.dispatch("pagination-change", pagination);
-                            this._client.pagination = { page: pageNumber, pageSize: data.pagination.pageSize };
+                            this._client.pagination = { page: pageNumber, pageSize: paginationData().pageSize };
                             this._client.refresh();
                         }
                     });
@@ -1623,41 +1645,41 @@
                     });
                 };
                 // Always show the first page button
-                const firstButtonElement = createButtonElement(1, 1 === data.pagination.page);
+                const firstButtonElement = createButtonElement(1, 1 === paginationData().page);
                 this._elements.container?.appendChild(firstButtonElement);
                 // Add ellipsis after the first page if needed (on page 5 or more)
-                if (data.pagination.page > 4) {
+                if (paginationData().page > 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show pages around the current page
                 // Example: 1 2 3 4 5 .. 20
                 // Example: 1 .. 4 5 6 .. 20
                 // Example: 1 .. 16 17 18 19 20
-                if (data.pagination.page < 5) {
-                    for (let i = 2; i <= Math.min(5, data.pagination.totalPages - 1); i++) {
-                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                if (paginationData().page < 5) {
+                    for (let i = 2; i <= Math.min(5, paginationData().totalPages - 1); i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData().page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
-                else if (data.pagination.page > data.pagination.totalPages - 4) {
-                    for (let i = Math.max(data.pagination.totalPages - 4, 2); i <= data.pagination.totalPages - 1; i++) {
-                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                else if (paginationData().page > paginationData().totalPages - 4) {
+                    for (let i = Math.max(paginationData().totalPages - 4, 2); i <= paginationData().totalPages - 1; i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData().page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
                 else {
-                    for (let i = data.pagination.page - 1; i <= data.pagination.page + 1; i++) {
-                        const buttonElement = createButtonElement(i, i === data.pagination.page);
+                    for (let i = paginationData().page - 1; i <= paginationData().page + 1; i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData().page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
                 // Add ellipsis before the last page if needed
-                if (data.pagination.page <= data.pagination.totalPages - 4) {
+                if (paginationData().page <= paginationData().totalPages - 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show the last page button when there are more pages than 1
-                if (data.pagination.totalPages > 1) {
-                    const lastButton = createButtonElement(data.pagination.totalPages, data.pagination.totalPages === data.pagination.page);
+                if (paginationData().totalPages > 1) {
+                    const lastButton = createButtonElement(paginationData().totalPages, paginationData().totalPages === paginationData().page);
                     this._elements.container?.appendChild(lastButton);
                 }
             }

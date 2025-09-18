@@ -1,11 +1,11 @@
 import { z } from "zod/mini";
 
 export const responseSchema = z.object({
-    "pagination": z.object({
+    "pagination": z.optional(z.object({
         "page": z.number(),
         "pageSize": z.number(),
         "totalPages": z.number(),
-    }),
+    })),
     "data": z.array(
         z.array(
             z.object({

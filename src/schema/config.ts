@@ -3,6 +3,7 @@ import { columnSchema } from "./column";
 
 export const configSchema = z.object({
     "ajaxURL": z.string(),
+    "ajaxMethod": z.enum(["GET", "POST"]),
     "ajaxHeaders": z._default(z.record(z.string(), z.string()), {
         "Content-Type": "application/json",
         "X-Requested-With": "XMLHttpRequest",

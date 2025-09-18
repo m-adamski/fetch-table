@@ -1,6 +1,6 @@
 {
     "name": "@m-adamski/fetch-table",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "module",
     "main": "dist/table.bundle.js",
     "module": "dist/table.bundle.esm.js",
