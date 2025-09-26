@@ -1,6 +1,6 @@
 {
     "name": "@m-adamski/fetch-table",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "type": "module",
     "main": "dist/table.bundle.js",
     "module": "dist/table.bundle.esm.js",
@@ -15,6 +15,7 @@
     "scripts": {
         "rollup:build": "rollup -c rollup.config.js",
         "rollup:watch": "rollup -c rollup.config.js --watch",
+        "express": "node express.js",
         "dev": "node express.js & npm run rollup:watch"
     },
     "devDependencies": {
@@ -22,9 +23,9 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.4",
         "express": "^5.1.0",
-        "rollup": "^4.45.1",
+        "rollup": "^4.52.2",
         "tslib": "^2.8.1",
-        "typescript": "^5.8.3",
-        "zod": "^4.0.10"
+        "typescript": "^5.9.2",
+        "zod": "^4.1.11"
     }
 }

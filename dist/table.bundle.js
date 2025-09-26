@@ -113,14 +113,6 @@
             configurable: true,
         });
     }
-    function assignProp(target, prop, value) {
-        Object.defineProperty(target, prop, {
-            value,
-            writable: true,
-            enumerable: true,
-            configurable: true,
-        });
-    }
     const captureStackTrace = ("captureStackTrace" in Error ? Error.captureStackTrace : (..._args) => { });
     function isObject(data) {
         return typeof data === "object" && data !== null && !Array.isArray(data);
@@ -294,7 +286,7 @@
     const version = {
         major: 4,
         minor: 1,
-        patch: 9,
+        patch: 11,
     };
 
     const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
@@ -606,6 +598,20 @@
     const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
         // requires cast because technically $ZodObject doesn't extend
         $ZodType.init(inst, def);
+        // const sh = def.shape;
+        const desc = Object.getOwnPropertyDescriptor(def, "shape");
+        if (!desc?.get) {
+            const sh = def.shape;
+            Object.defineProperty(def, "shape", {
+                get: () => {
+                    const newSh = { ...sh };
+                    Object.defineProperty(def, "shape", {
+                        value: newSh,
+                    });
+                    return newSh;
+                },
+            });
+        }
         const _normalized = cached(() => normalizeDef(def));
         defineLazy(inst._zod, "propValues", () => {
             const shape = def.shape;
@@ -923,10 +929,7 @@
     function object(shape, params) {
         const def = {
             type: "object",
-            get shape() {
-                assignProp(this, "shape", { ...shape });
-                return this.shape;
-            },
+            shape: shape ?? {},
             ...normalizeParams(),
         };
         return new ZodMiniObject(def);
