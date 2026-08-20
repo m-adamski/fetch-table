@@ -1,21 +1,30 @@
-/** A special constant with type `never` */
+var _a;
 function $constructor(name, initializer, params) {
     function init(inst, def) {
-        var _a;
-        Object.defineProperty(inst, "_zod", {
-            value: inst._zod ?? {},
-            enumerable: false,
-        });
-        (_a = inst._zod).traits ?? (_a.traits = new Set());
+        if (!inst._zod) {
+            Object.defineProperty(inst, "_zod", {
+                value: {
+                    def,
+                    constr: _,
+                    traits: new Set(),
+                },
+                enumerable: false,
+            });
+        }
+        if (inst._zod.traits.has(name)) {
+            return;
+        }
         inst._zod.traits.add(name);
         initializer(inst, def);
         // support prototype modifications
-        for (const k in _.prototype) {
-            if (!(k in inst))
-                Object.defineProperty(inst, k, { value: _.prototype[k].bind(inst) });
+        const proto = _.prototype;
+        const keys = Object.keys(proto);
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            if (!(k in inst)) {
+                inst[k] = proto[k].bind(inst);
+            }
         }
-        inst._zod.constr = _;
-        inst._zod.def = def;
     }
     // doesn't work if Parent has a constructor with arguments
     const Parent = params?.Parent ?? Object;
@@ -48,12 +57,12 @@ class $ZodAsyncError extends Error {
         super(`Encountered Promise during synchronous parse. Use .parseAsync() instead.`);
     }
 }
-const globalConfig = {};
+(_a = globalThis).__zod_globalConfig ?? (_a.__zod_globalConfig = {});
+const globalConfig = globalThis.__zod_globalConfig;
 function config(newConfig) {
     return globalConfig;
 }
 
-// functions
 function getEnumValues(entries) {
     const numericValues = Object.values(entries).filter((v) => typeof v === "number");
     const values = Object.entries(entries)
@@ -82,7 +91,7 @@ function cleanRegex(source) {
     const end = source.endsWith("$") ? source.length - 1 : source.length;
     return source.slice(start, end);
 }
-const EVALUATING = Symbol("evaluating");
+const EVALUATING = /* @__PURE__*/ Symbol("evaluating");
 function defineLazy(object, key, getter) {
     let value = undefined;
     Object.defineProperty(object, key, {
@@ -118,6 +127,8 @@ function isPlainObject(o) {
     const ctor = o.constructor;
     if (ctor === undefined)
         return true;
+    if (typeof ctor !== "function")
+        return true;
     // modified prototype
     const prot = ctor.prototype;
     if (isObject(prot) === false)
@@ -133,9 +144,13 @@ function shallowClone(o) {
         return { ...o };
     if (Array.isArray(o))
         return [...o];
+    if (o instanceof Map)
+        return new Map(o);
+    if (o instanceof Set)
+        return new Set(o);
     return o;
 }
-const propertyKeyTypes = new Set(["string", "number", "symbol"]);
+const propertyKeyTypes = /* @__PURE__*/ new Set(["string", "number", "symbol"]);
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -147,7 +162,20 @@ function clone(inst, def, params) {
     return cl;
 }
 function normalizeParams(_params) {
-    return {};
+    const params = _params;
+    if (!params)
+        return {};
+    if (typeof params === "string")
+        return { error: () => params };
+    if (params?.message !== undefined) {
+        if (params?.error !== undefined)
+            throw new Error("Cannot specify both `message` and `error` params");
+        params.error = params.message;
+    }
+    delete params.message;
+    if (typeof params.error === "string")
+        return { ...params, error: () => params.error };
+    return params;
 }
 function optionalKeys(shape) {
     return Object.keys(shape).filter((k) => {
@@ -165,6 +193,18 @@ function aborted(x, startIndex = 0) {
     }
     return false;
 }
+// Checks for explicit abort (continue === false), as opposed to implicit abort (continue === undefined).
+// Used to respect `abort: true` in .refine() even for checks that have a `when` function.
+function explicitlyAborted(x, startIndex = 0) {
+    if (x.aborted === true)
+        return true;
+    for (let i = startIndex; i < x.issues.length; i++) {
+        if (x.issues[i]?.continue === false) {
+            return true;
+        }
+    }
+    return false;
+}
 function prefixIssues(path, issues) {
     return issues.map((iss) => {
         var _a;
@@ -177,23 +217,20 @@ function unwrapMessage(message) {
     return typeof message === "string" ? message : message?.message;
 }
 function finalizeIssue(iss, ctx, config) {
-    const full = { ...iss, path: iss.path ?? [] };
-    // for backwards compatibility
-    if (!iss.message) {
-        const message = unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ??
+    const message = iss.message
+        ? iss.message
+        : (unwrapMessage(iss.inst?._zod.def?.error?.(iss)) ??
             unwrapMessage(ctx?.error?.(iss)) ??
             unwrapMessage(config.customError?.(iss)) ??
             unwrapMessage(config.localeError?.(iss)) ??
-            "Invalid input";
-        full.message = message;
+            "Invalid input");
+    const { inst: _inst, continue: _continue, input: _input, ...rest } = iss;
+    rest.path ?? (rest.path = []);
+    rest.message = message;
+    if (ctx?.reportInput) {
+        rest.input = _input;
     }
-    // delete (full as any).def;
-    delete full.inst;
-    delete full.continue;
-    if (!ctx?.reportInput) {
-        delete full.input;
-    }
-    return full;
+    return rest;
 }
 
 const initializer = (inst, def) => {
@@ -216,7 +253,7 @@ const $ZodError = $constructor("$ZodError", initializer);
 const $ZodRealError = $constructor("$ZodError", initializer, { Parent: Error });
 
 const _parse = (_Err) => (schema, value, _ctx, _params) => {
-    const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
+    const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
     const result = schema._zod.run({ value, issues: [] }, ctx);
     if (result instanceof Promise) {
         throw new $ZodAsyncError();
@@ -230,7 +267,7 @@ const _parse = (_Err) => (schema, value, _ctx, _params) => {
 };
 const parse = /* @__PURE__*/ _parse($ZodRealError);
 const _parseAsync = (_Err) => async (schema, value, _ctx, params) => {
-    const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
+    const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
     let result = schema._zod.run({ value, issues: [] }, ctx);
     if (result instanceof Promise)
         result = await result;
@@ -257,7 +294,7 @@ const _safeParse = (_Err) => (schema, value, _ctx) => {
 };
 const safeParse = /* @__PURE__*/ _safeParse($ZodRealError);
 const _safeParseAsync = (_Err) => async (schema, value, _ctx) => {
-    const ctx = _ctx ? Object.assign(_ctx, { async: true }) : { async: true };
+    const ctx = _ctx ? { ..._ctx, async: true } : { async: true };
     let result = schema._zod.run({ value, issues: [] }, ctx);
     if (result instanceof Promise)
         result = await result;
@@ -274,13 +311,13 @@ const string$1 = (params) => {
     const regex = params ? `[\\s\\S]{${params?.minimum ?? 0},${params?.maximum ?? ""}}` : `[\\s\\S]*`;
     return new RegExp(`^${regex}$`);
 };
-const number$1 = /^-?\d+(?:\.\d+)?/;
+const number$1 = /^-?\d+(?:\.\d+)?$/;
 const boolean$1 = /^(?:true|false)$/i;
 
 const version = {
     major: 4,
-    minor: 1,
-    patch: 11,
+    minor: 4,
+    patch: 3,
 };
 
 const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
@@ -313,6 +350,8 @@ const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
             let asyncResult;
             for (const ch of checks) {
                 if (ch._zod.def.when) {
+                    if (explicitlyAborted(payload))
+                        continue;
                     const shouldRun = ch._zod.def.when(payload);
                     if (!shouldRun)
                         continue;
@@ -350,16 +389,6 @@ const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
             }
             return payload;
         };
-        // const handleChecksResult = (
-        //   checkResult: ParsePayload,
-        //   originalResult: ParsePayload,
-        //   ctx: ParseContextInternal
-        // ): util.MaybeAsync<ParsePayload> => {
-        //   // if the checks mutated the value && there are no issues, re-parse the result
-        //   if (checkResult.value !== originalResult.value && !checkResult.issues.length)
-        //     return inst._zod.parse(checkResult, ctx);
-        //   return originalResult;
-        // };
         const handleCanaryResult = (canary, payload, ctx) => {
             // abort if the canary is aborted
             if (aborted(canary)) {
@@ -400,7 +429,8 @@ const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
             return runChecks(result, checks, ctx);
         };
     }
-    inst["~standard"] = {
+    // Lazy initialize ~standard to avoid creating objects for every schema
+    defineLazy(inst, "~standard", () => ({
         validate: (value) => {
             try {
                 const r = safeParse(inst, value);
@@ -412,7 +442,7 @@ const $ZodType = /*@__PURE__*/ $constructor("$ZodType", (inst, def) => {
         },
         vendor: "zod",
         version: 1,
-    };
+    }));
 });
 const $ZodString = /*@__PURE__*/ $constructor("$ZodString", (inst, def) => {
     $ZodType.init(inst, def);
@@ -525,12 +555,28 @@ const $ZodArray = /*@__PURE__*/ $constructor("$ZodArray", (inst, def) => {
         return payload; //handleArrayResultsAsync(parseResults, final);
     };
 });
-function handlePropertyResult(result, final, key, input) {
+function handlePropertyResult(result, final, key, input, isOptionalIn, isOptionalOut) {
+    const isPresent = key in input;
     if (result.issues.length) {
+        // For optional-in/out schemas, ignore errors on absent keys.
+        if (isOptionalIn && isOptionalOut && !isPresent) {
+            return;
+        }
         final.issues.push(...prefixIssues(key, result.issues));
     }
+    if (!isPresent && !isOptionalIn) {
+        if (!result.issues.length) {
+            final.issues.push({
+                code: "invalid_type",
+                expected: "nonoptional",
+                input: undefined,
+                path: [key],
+            });
+        }
+        return;
+    }
     if (result.value === undefined) {
-        if (key in input) {
+        if (isPresent) {
             final.value[key] = undefined;
         }
     }
@@ -556,11 +602,16 @@ function normalizeDef(def) {
 }
 function handleCatchall(proms, input, payload, ctx, def, inst) {
     const unrecognized = [];
-    // iterate over input keys
     const keySet = def.keySet;
     const _catchall = def.catchall._zod;
     const t = _catchall.def.type;
-    for (const key of Object.keys(input)) {
+    const isOptionalIn = _catchall.optin === "optional";
+    const isOptionalOut = _catchall.optout === "optional";
+    for (const key in input) {
+        // skip __proto__ so it can't replace the result prototype via the
+        // assignment setter on the plain {} we build into
+        if (key === "__proto__")
+            continue;
         if (keySet.has(key))
             continue;
         if (t === "never") {
@@ -569,10 +620,10 @@ function handleCatchall(proms, input, payload, ctx, def, inst) {
         }
         const r = _catchall.run({ value: input[key], issues: [] }, ctx);
         if (r instanceof Promise) {
-            proms.push(r.then((r) => handlePropertyResult(r, payload, key, input)));
+            proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
         }
         else {
-            handlePropertyResult(r, payload, key, input);
+            handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
         }
     }
     if (unrecognized.length) {
@@ -640,12 +691,14 @@ const $ZodObject = /*@__PURE__*/ $constructor("$ZodObject", (inst, def) => {
         const shape = value.shape;
         for (const key of value.keys) {
             const el = shape[key];
+            const isOptionalIn = el._zod.optin === "optional";
+            const isOptionalOut = el._zod.optout === "optional";
             const r = el._zod.run({ value: input[key], issues: [] }, ctx);
             if (r instanceof Promise) {
-                proms.push(r.then((r) => handlePropertyResult(r, payload, key, input)));
+                proms.push(r.then((r) => handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut)));
             }
             else {
-                handlePropertyResult(r, payload, key, input);
+                handlePropertyResult(r, payload, key, input, isOptionalIn, isOptionalOut);
             }
         }
         if (!catchall) {
@@ -668,31 +721,49 @@ const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
             return payload;
         }
         const proms = [];
-        if (def.keyType._zod.values) {
-            const values = def.keyType._zod.values;
+        const values = def.keyType._zod.values;
+        if (values) {
             payload.value = {};
+            const recordKeys = new Set();
             for (const key of values) {
                 if (typeof key === "string" || typeof key === "number" || typeof key === "symbol") {
+                    recordKeys.add(typeof key === "number" ? key.toString() : key);
+                    const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+                    if (keyResult instanceof Promise) {
+                        throw new Error("Async schemas not supported in object keys currently");
+                    }
+                    if (keyResult.issues.length) {
+                        payload.issues.push({
+                            code: "invalid_key",
+                            origin: "record",
+                            issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+                            input: key,
+                            path: [key],
+                            inst,
+                        });
+                        continue;
+                    }
+                    const outKey = keyResult.value;
                     const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
                     if (result instanceof Promise) {
                         proms.push(result.then((result) => {
                             if (result.issues.length) {
                                 payload.issues.push(...prefixIssues(key, result.issues));
                             }
-                            payload.value[key] = result.value;
+                            payload.value[outKey] = result.value;
                         }));
                     }
                     else {
                         if (result.issues.length) {
                             payload.issues.push(...prefixIssues(key, result.issues));
                         }
-                        payload.value[key] = result.value;
+                        payload.value[outKey] = result.value;
                     }
                 }
             }
             let unrecognized;
             for (const key in input) {
-                if (!values.has(key)) {
+                if (!recordKeys.has(key)) {
                     unrecognized = unrecognized ?? [];
                     unrecognized.push(key);
                 }
@@ -708,23 +779,44 @@ const $ZodRecord = /*@__PURE__*/ $constructor("$ZodRecord", (inst, def) => {
         }
         else {
             payload.value = {};
+            // Reflect.ownKeys for Symbol-key support; filter non-enumerable to match z.object()
             for (const key of Reflect.ownKeys(input)) {
                 if (key === "__proto__")
                     continue;
-                const keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
+                if (!Object.prototype.propertyIsEnumerable.call(input, key))
+                    continue;
+                let keyResult = def.keyType._zod.run({ value: key, issues: [] }, ctx);
                 if (keyResult instanceof Promise) {
                     throw new Error("Async schemas not supported in object keys currently");
                 }
+                // Numeric string fallback: if key is a numeric string and failed, retry with Number(key)
+                // This handles z.number(), z.literal([1, 2, 3]), and unions containing numeric literals
+                const checkNumericKey = typeof key === "string" && number$1.test(key) && keyResult.issues.length;
+                if (checkNumericKey) {
+                    const retryResult = def.keyType._zod.run({ value: Number(key), issues: [] }, ctx);
+                    if (retryResult instanceof Promise) {
+                        throw new Error("Async schemas not supported in object keys currently");
+                    }
+                    if (retryResult.issues.length === 0) {
+                        keyResult = retryResult;
+                    }
+                }
                 if (keyResult.issues.length) {
-                    payload.issues.push({
-                        code: "invalid_key",
-                        origin: "record",
-                        issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
-                        input: key,
-                        path: [key],
-                        inst,
-                    });
-                    payload.value[keyResult.value] = keyResult.value;
+                    if (def.mode === "loose") {
+                        // Pass through unchanged
+                        payload.value[key] = input[key];
+                    }
+                    else {
+                        // Default "strict" behavior: error on invalid key
+                        payload.issues.push({
+                            code: "invalid_key",
+                            origin: "record",
+                            issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+                            input: key,
+                            path: [key],
+                            inst,
+                        });
+                    }
                     continue;
                 }
                 const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
@@ -774,7 +866,7 @@ const $ZodEnum = /*@__PURE__*/ $constructor("$ZodEnum", (inst, def) => {
     };
 });
 function handleOptionalResult(result, input) {
-    if (result.issues.length && input === undefined) {
+    if (input === undefined && (result.issues.length || result.fallback)) {
         return { issues: [], value: undefined };
     }
     return result;
@@ -792,10 +884,11 @@ const $ZodOptional = /*@__PURE__*/ $constructor("$ZodOptional", (inst, def) => {
     });
     inst._zod.parse = (payload, ctx) => {
         if (def.innerType._zod.optin === "optional") {
+            const input = payload.value;
             const result = def.innerType._zod.run(payload, ctx);
             if (result instanceof Promise)
-                return result.then((r) => handleOptionalResult(r, payload.value));
-            return handleOptionalResult(result, payload.value);
+                return result.then((r) => handleOptionalResult(r, input));
+            return handleOptionalResult(result, input);
         }
         if (payload.value === undefined) {
             return payload;
@@ -835,23 +928,26 @@ function handleDefaultResult(payload, def) {
     return payload;
 }
 
+// @__NO_SIDE_EFFECTS__
 function _string(Class, params) {
     return new Class({
         type: "string",
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
+// @__NO_SIDE_EFFECTS__
 function _number(Class, params) {
     return new Class({
         type: "number",
         checks: [],
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
+// @__NO_SIDE_EFFECTS__
 function _boolean(Class, params) {
     return new Class({
         type: "boolean",
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
 
@@ -870,49 +966,57 @@ const ZodMiniType = /*@__PURE__*/ $constructor("ZodMiniType", (inst, def) => {
             ...def,
             checks: [
                 ...(def.checks ?? []),
-                ...checks.map((ch) => typeof ch === "function" ? { _zod: { check: ch, def: { check: "custom" }, onattach: [] } } : ch),
+                ...checks.map((ch) => typeof ch === "function"
+                    ? {
+                        _zod: { check: ch, def: { check: "custom" }, onattach: [] },
+                    }
+                    : ch),
             ],
-        }
-        // { parent: true }
-        );
+        }, { parent: true });
     };
+    inst.with = inst.check;
     inst.clone = (_def, params) => clone(inst, _def, params);
     inst.brand = () => inst;
     inst.register = ((reg, meta) => {
         reg.add(inst, meta);
         return inst;
     });
+    inst.apply = (fn) => fn(inst);
 });
 const ZodMiniString = /*@__PURE__*/ $constructor("ZodMiniString", (inst, def) => {
     $ZodString.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function string(params) {
-    return _string(ZodMiniString);
+    return _string(ZodMiniString, params);
 }
 const ZodMiniNumber = /*@__PURE__*/ $constructor("ZodMiniNumber", (inst, def) => {
     $ZodNumber.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function number(params) {
-    return _number(ZodMiniNumber);
+    return _number(ZodMiniNumber, params);
 }
 const ZodMiniBoolean = /*@__PURE__*/ $constructor("ZodMiniBoolean", (inst, def) => {
     $ZodBoolean.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function boolean(params) {
-    return _boolean(ZodMiniBoolean);
+    return _boolean(ZodMiniBoolean, params);
 }
 const ZodMiniArray = /*@__PURE__*/ $constructor("ZodMiniArray", (inst, def) => {
     $ZodArray.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function array(element, params) {
     return new ZodMiniArray({
         type: "array",
         element: element,
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
 const ZodMiniObject = /*@__PURE__*/ $constructor("ZodMiniObject", (inst, def) => {
@@ -920,11 +1024,12 @@ const ZodMiniObject = /*@__PURE__*/ $constructor("ZodMiniObject", (inst, def) =>
     ZodMiniType.init(inst, def);
     defineLazy(inst, "shape", () => def.shape);
 });
+// @__NO_SIDE_EFFECTS__
 function object(shape, params) {
     const def = {
         type: "object",
         shape: shape ?? {},
-        ...normalizeParams(),
+        ...normalizeParams(params),
     };
     return new ZodMiniObject(def);
 }
@@ -932,12 +1037,22 @@ const ZodMiniRecord = /*@__PURE__*/ $constructor("ZodMiniRecord", (inst, def) =>
     $ZodRecord.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function record(keyType, valueType, params) {
+    // v3-compat: z.record(valueType, params?) — defaults keyType to z.string()
+    if (!valueType || !valueType._zod) {
+        return new ZodMiniRecord({
+            type: "record",
+            keyType: string(),
+            valueType: keyType,
+            ...normalizeParams(valueType),
+        });
+    }
     return new ZodMiniRecord({
         type: "record",
         keyType,
         valueType: valueType,
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
 const ZodMiniEnum = /*@__PURE__*/ $constructor("ZodMiniEnum", (inst, def) => {
@@ -945,18 +1060,20 @@ const ZodMiniEnum = /*@__PURE__*/ $constructor("ZodMiniEnum", (inst, def) => {
     ZodMiniType.init(inst, def);
     inst.options = Object.values(def.entries);
 });
+// @__NO_SIDE_EFFECTS__
 function _enum(values, params) {
     const entries = Array.isArray(values) ? Object.fromEntries(values.map((v) => [v, v])) : values;
     return new ZodMiniEnum({
         type: "enum",
         entries,
-        ...normalizeParams(),
+        ...normalizeParams(params),
     });
 }
 const ZodMiniOptional = /*@__PURE__*/ $constructor("ZodMiniOptional", (inst, def) => {
     $ZodOptional.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function optional(innerType) {
     return new ZodMiniOptional({
         type: "optional",
@@ -967,6 +1084,7 @@ const ZodMiniDefault = /*@__PURE__*/ $constructor("ZodMiniDefault", (inst, def) 
     $ZodDefault.init(inst, def);
     ZodMiniType.init(inst, def);
 });
+// @__NO_SIDE_EFFECTS__
 function _default(innerType, defaultValue) {
     return new ZodMiniDefault({
         type: "default",
