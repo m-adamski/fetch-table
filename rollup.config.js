@@ -26,5 +26,12 @@ export default {
             plugins: [ terser() ]
         },
     ],
-    plugins: [ typescript(), nodeResolve() ]
+    plugins: [
+        typescript({
+            declaration: true,
+            declarationDir: "dist/types",
+            rootDir: "src"
+        }),
+        nodeResolve()
+    ]
 };

@@ -12,7 +12,8 @@
         "strict": true,
         "skipLibCheck": true,
         "outDir": "dist",
-        "declaration": false,
+        "declaration": true,
+        "declarationDir": "dist/types",
         "sourceMap": false,
         "moduleResolution": "bundler"
     },
