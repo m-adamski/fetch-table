@@ -280,8 +280,8 @@ export default class PaginationComponent extends Component {
                 "Showing _ENTRY_FIRST - _ENTRY_LAST of _ENTRY_ALL entries (Page _PAGE_CURRENT of _PAGE_ALL)";
 
             description = description.replace("_ENTRY_FIRST", String(paginationData.page * paginationData.pageSize - paginationData.pageSize + 1));
-            description = description.replace("_ENTRY_LAST", String(Math.min(paginationData.page * paginationData.pageSize, data.total)));
-            description = description.replace("_ENTRY_ALL", String(data.total));
+            description = description.replace("_ENTRY_LAST", String(Math.min(paginationData.page * paginationData.pageSize, data.totalRecords)));
+            description = description.replace("_ENTRY_ALL", String(data.totalRecords));
             description = description.replace("_PAGE_CURRENT", String(paginationData.page));
             description = description.replace("_PAGE_ALL", String(paginationData.totalPages));
 

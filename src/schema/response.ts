@@ -15,7 +15,7 @@ export const responseSchema = z.object({
         "pageSize": z.number(),
         "totalPages": z.number(),
     })),
-    "total": z.number()
+    "totalRecords": z.number()
 });
 
 export type ResponseSchema = z.infer<typeof responseSchema>;

@@ -10,6 +10,6 @@ export declare const responseSchema: z.ZodMiniObject<{
         pageSize: z.ZodMiniNumber<number>;
         totalPages: z.ZodMiniNumber<number>;
     }, z.core.$strip>>;
-    total: z.ZodMiniNumber<number>;
+    totalRecords: z.ZodMiniNumber<number>;
 }, z.core.$strip>;
 export type ResponseSchema = z.infer<typeof responseSchema>;

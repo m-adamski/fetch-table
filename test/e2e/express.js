@@ -66,7 +66,7 @@ app.get("/ajax-data", (request, response) => {
     }
 
     response.json({
-        "total": data.length,
+        "totalRecords": data.length,
         "totalFiltered": totalFiltered,
         "pagination": {
             "page": paginationPage,
