@@ -19,8 +19,8 @@ app.get("/ajax-data", (request, response) => {
     let search = requestQuery["search"];
     let sortColumn = requestQuery["sort-column"];
     let sortDirection = requestQuery["sort-direction"];
-    let paginationPage = Number(requestQuery["pagination-page"]) || 1;
-    let paginationSize = Number(requestQuery["pagination-size"]) || 10;
+    let paginationPage = Number(requestQuery["pagination[page]"]) || 1;
+    let paginationSize = Number(requestQuery["pagination[size]"]) || 10;
 
     if (search !== undefined) {
         responseData = responseData.filter(item => {

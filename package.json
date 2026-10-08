@@ -1,6 +1,6 @@
 {
     "name": "@m-adamski/fetch-table",
-    "version": "0.1.7",
+    "version": "0.2.0",
     "type": "module",
     "main": "dist/table.bundle.js",
     "module": "dist/table.bundle.esm.js",
@@ -29,8 +29,7 @@
         "build": "rollup -c rollup.config.js",
         "prepublishOnly": "rollup -c rollup.config.js",
         "watch": "rollup -c rollup.config.js --watch",
-        "dev": "node express.js & npm run rollup:watch",
-        "preview": "node express.js"
+        "preview": "node test/e2e/express.js"
     },
     "devDependencies": {
         "@rollup/plugin-node-resolve": "^16.0.3",

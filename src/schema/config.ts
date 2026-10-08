@@ -101,6 +101,7 @@ export const configSchema = z.object({
             "sizeSelector": z.optional(z.object({
                 "container": z.optional(z.object({
                     "className": z.optional(z.string()),
+                    "innerHTML": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
                 })),
                 "select": z.optional(z.object({
@@ -111,7 +112,13 @@ export const configSchema = z.object({
                     "className": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
                 }))
-            }))
+            })),
+            "description": z.optional(z.object({
+                "container": z.optional(z.object({
+                    "className": z.optional(z.string()),
+                    "attributes": z.optional(z.record(z.string(), z.string())),
+                })),
+            })),
         })),
         "search": z.optional(z.object({
             "container": z.optional(z.object({
@@ -130,6 +137,10 @@ export const configSchema = z.object({
             "pageSize": z.number(),
             "availableSizes": z.array(z.number()),
             "style": z.enum(["standard", "simple"]),
+            "description": z.optional(z.object({
+                "active": z.boolean(),
+                "innerHTML": z.optional(z.string()),
+            })),
         }),
         "search": z.object({
             "active": z.boolean(),

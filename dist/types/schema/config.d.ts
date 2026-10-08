@@ -107,6 +107,7 @@ export declare const configSchema: z.ZodMiniObject<{
             sizeSelector: z.ZodMiniOptional<z.ZodMiniObject<{
                 container: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    innerHTML: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
                 select: z.ZodMiniOptional<z.ZodMiniObject<{
@@ -114,6 +115,12 @@ export declare const configSchema: z.ZodMiniObject<{
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
                 option: z.ZodMiniOptional<z.ZodMiniObject<{
+                    className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+            description: z.ZodMiniOptional<z.ZodMiniObject<{
+                container: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
@@ -139,6 +146,10 @@ export declare const configSchema: z.ZodMiniObject<{
                 standard: "standard";
                 simple: "simple";
             }>;
+            description: z.ZodMiniOptional<z.ZodMiniObject<{
+                active: z.ZodMiniBoolean<boolean>;
+                innerHTML: z.ZodMiniOptional<z.ZodMiniString<string>>;
+            }, z.core.$strip>>;
         }, z.core.$strip>;
         search: z.ZodMiniObject<{
             active: z.ZodMiniBoolean<boolean>;

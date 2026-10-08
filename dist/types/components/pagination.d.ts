@@ -18,5 +18,19 @@ export default class PaginationComponent extends Component {
      * @param data
      * @private
      */
-    private render;
+    private renderPagination;
+    /**
+     * Render description.
+     *
+     * @param data
+     * @private
+     */
+    private renderDescription;
+    /**
+     * Internal function to get pagination data from the response.
+     *
+     * @param data
+     * @private
+     */
+    private getPaginationData;
 }

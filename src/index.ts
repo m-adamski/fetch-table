@@ -81,11 +81,11 @@ export default class FetchTable {
         // Register components
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
 
-        if (this._config.components?.search?.active === true) {
+        if (this._config.components?.search?.active) {
             this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         }
 
-        if (this._config.components?.pagination?.active === true) {
+        if (this._config.components?.pagination?.active) {
             this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
             this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
         }

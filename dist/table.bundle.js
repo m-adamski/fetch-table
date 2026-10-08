@@ -1209,6 +1209,7 @@
                 "sizeSelector": optional(object({
                     "container": optional(object({
                         "className": optional(string()),
+                        "innerHTML": optional(string()),
                         "attributes": optional(record(string(), string())),
                     })),
                     "select": optional(object({
@@ -1219,7 +1220,13 @@
                         "className": optional(string()),
                         "attributes": optional(record(string(), string())),
                     }))
-                }))
+                })),
+                "description": optional(object({
+                    "container": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                })),
             })),
             "search": optional(object({
                 "container": optional(object({
@@ -1238,6 +1245,10 @@
                 "pageSize": number(),
                 "availableSizes": array(number()),
                 "style": _enum(["standard", "simple"]),
+                "description": optional(object({
+                    "active": boolean(),
+                    "innerHTML": optional(string()),
+                })),
             }),
             "search": object({
                 "active": boolean(),
@@ -1299,16 +1310,17 @@
     }
 
     const responseSchema = object({
-        "pagination": optional(object({
-            "page": number(),
-            "pageSize": number(),
-            "totalPages": number(),
-        })),
         "data": array(array(object({
             "column": string(),
             "className": optional(string()),
             "value": string()
         }))),
+        "pagination": optional(object({
+            "page": number(),
+            "pageSize": number(),
+            "totalPages": number(),
+        })),
+        "total": number()
     });
 
     class Client {
@@ -1599,12 +1611,14 @@
             this._isLoading = false;
             this._elements = {
                 container: null,
+                descriptionContainer: null,
                 sizeContainer: null,
                 sizeSelect: null
             };
             // Register event handlers
             this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
-            this._eventDispatcher.register("data-fetch", (data) => this.render(data));
+            this._eventDispatcher.register("data-fetch", (data) => this.renderPagination(data));
+            this._eventDispatcher.register("data-fetch", (data) => this.renderDescription(data));
             this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
             this.init();
         }
@@ -1621,6 +1635,10 @@
                 className: this._config.elements?.pagination?.container?.className,
                 attributes: this._config.elements?.pagination?.container?.attributes,
                 ariaLabel: "Pagination"
+            });
+            this._elements.descriptionContainer = createElement("div", {
+                className: this._config.elements?.pagination?.description?.container?.className,
+                attributes: this._config.elements?.pagination?.description?.container?.attributes
             });
             this._elements.sizeContainer = createElement("div", {
                 className: this._config.elements?.pagination?.sizeSelector?.container?.className,
@@ -1654,8 +1672,9 @@
                 }
             });
             this._elements.sizeContainer.appendChild(sizeSelectElement);
-            this._coreElement.appendChild(this._elements.sizeContainer);
+            this._coreElement.appendChild(this._elements.descriptionContainer);
             this._coreElement.appendChild(this._elements.container);
+            this._coreElement.appendChild(this._elements.sizeContainer);
         }
         /**
          * Renders the pagination controls and initializes event listeners for navigating between pages.
@@ -1663,36 +1682,31 @@
          * @param data
          * @private
          */
-        render(data) {
+        renderPagination(data) {
             if (this._config.debug)
                 console.info("[Pagination Component] Rendering data..");
             if (this._elements.container === null) {
                 throw new Error("[Pagination Component] Container element couldn't be found. First, initialize the component with the init() method");
             }
-            // Internal function to get the pagination data from the response
-            const paginationData = () => {
-                if (data.pagination === undefined) {
-                    throw new Error("[Pagination Component] Pagination data is missing. Please check your API response");
-                }
-                return data.pagination;
-            };
+            // Get the pagination data from the response
+            const paginationData = this.getPaginationData(data);
             this._elements.container.innerText = "";
             const previousButtonElement = createElement("button", {
                 className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
                 attributes: this._config.elements?.pagination?.button?.previous?.attributes,
                 innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
-                disabled: paginationData().page === 1 ? "disabled" : null,
+                disabled: paginationData.page === 1 ? "disabled" : null,
                 type: "button"
             });
             previousButtonElement.addEventListener("click", () => {
                 if (!this._isLoading) {
-                    if (paginationData().page > 1) {
+                    if (paginationData.page > 1) {
                         if (this._config.debug)
                             console.info(`[Pagination Component] Moving to the previous page`);
                         // Create the pagination object, dispatch event and refresh data
                         let pagination = {
-                            page: paginationData().page - 1,
-                            pageSize: paginationData().pageSize
+                            page: paginationData.page - 1,
+                            pageSize: paginationData.pageSize
                         };
                         this._eventDispatcher.dispatch("pagination-change", pagination);
                         this._client.pagination = pagination;
@@ -1705,17 +1719,17 @@
                 className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
                 attributes: this._config.elements?.pagination?.button?.next?.attributes,
                 innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
-                disabled: paginationData().page === paginationData().totalPages ? "disabled" : null
+                disabled: paginationData.page === paginationData.totalPages ? "disabled" : null
             });
             nextButtonElement.addEventListener("click", () => {
                 if (!this._isLoading) {
-                    if (paginationData().page < paginationData().totalPages) {
+                    if (paginationData.page < paginationData.totalPages) {
                         if (this._config.debug)
                             console.info(`[Pagination Component] Moving to the next page`);
                         // Create the pagination object, dispatch event and refresh data
                         let pagination = {
-                            page: paginationData().page + 1,
-                            pageSize: paginationData().pageSize
+                            page: paginationData.page + 1,
+                            pageSize: paginationData.pageSize
                         };
                         this._eventDispatcher.dispatch("pagination-change", pagination);
                         this._client.pagination = pagination;
@@ -1746,10 +1760,10 @@
                             // Create the pagination object, dispatch event and refresh data
                             let pagination = {
                                 page: pageNumber,
-                                pageSize: paginationData().pageSize
+                                pageSize: paginationData.pageSize
                             };
                             this._eventDispatcher.dispatch("pagination-change", pagination);
-                            this._client.pagination = { page: pageNumber, pageSize: paginationData().pageSize };
+                            this._client.pagination = { page: pageNumber, pageSize: paginationData.pageSize };
                             this._client.refresh();
                         }
                     });
@@ -1766,45 +1780,82 @@
                     });
                 };
                 // Always show the first page button
-                const firstButtonElement = createButtonElement(1, 1 === paginationData().page);
+                const firstButtonElement = createButtonElement(1, 1 === paginationData.page);
                 this._elements.container?.appendChild(firstButtonElement);
                 // Add ellipsis after the first page if needed (on page 5 or more)
-                if (paginationData().page > 4) {
+                if (paginationData.page > 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show pages around the current page
                 // Example: 1 2 3 4 5 .. 20
                 // Example: 1 .. 4 5 6 .. 20
                 // Example: 1 .. 16 17 18 19 20
-                if (paginationData().page < 5) {
-                    for (let i = 2; i <= Math.min(5, paginationData().totalPages - 1); i++) {
-                        const buttonElement = createButtonElement(i, i === paginationData().page);
+                if (paginationData.page < 5) {
+                    for (let i = 2; i <= Math.min(5, paginationData.totalPages - 1); i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData.page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
-                else if (paginationData().page > paginationData().totalPages - 4) {
-                    for (let i = Math.max(paginationData().totalPages - 4, 2); i <= paginationData().totalPages - 1; i++) {
-                        const buttonElement = createButtonElement(i, i === paginationData().page);
+                else if (paginationData.page > paginationData.totalPages - 4) {
+                    for (let i = Math.max(paginationData.totalPages - 4, 2); i <= paginationData.totalPages - 1; i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData.page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
                 else {
-                    for (let i = paginationData().page - 1; i <= paginationData().page + 1; i++) {
-                        const buttonElement = createButtonElement(i, i === paginationData().page);
+                    for (let i = paginationData.page - 1; i <= paginationData.page + 1; i++) {
+                        const buttonElement = createButtonElement(i, i === paginationData.page);
                         this._elements.container?.appendChild(buttonElement);
                     }
                 }
                 // Add ellipsis before the last page if needed
-                if (paginationData().page <= paginationData().totalPages - 4) {
+                if (paginationData.page <= paginationData.totalPages - 4) {
                     this._elements.container?.appendChild(createEllipsisElement());
                 }
                 // Show the last page button when there are more pages than 1
-                if (paginationData().totalPages > 1) {
-                    const lastButton = createButtonElement(paginationData().totalPages, paginationData().totalPages === paginationData().page);
+                if (paginationData.totalPages > 1) {
+                    const lastButton = createButtonElement(paginationData.totalPages, paginationData.totalPages === paginationData.page);
                     this._elements.container?.appendChild(lastButton);
                 }
             }
             this._elements.container?.appendChild(nextButtonElement);
+        }
+        /**
+         * Render description.
+         *
+         * @param data
+         * @private
+         */
+        renderDescription(data) {
+            if (this._config.debug)
+                console.info("[Pagination Component] Rendering data..");
+            if (this._elements.descriptionContainer === null) {
+                throw new Error("[Pagination Component] Description container element couldn't be found. First, initialize the component with the init() method");
+            }
+            if (this._config.components.pagination.description?.active === true) {
+                const paginationData = this.getPaginationData(data);
+                let description = this._config.components.pagination.description?.innerHTML ??
+                    "Showing _ENTRY_FIRST - _ENTRY_LAST of _ENTRY_ALL entries (Page _PAGE_CURRENT of _PAGE_ALL)";
+                description = description.replace("_ENTRY_FIRST", String(paginationData.page * paginationData.pageSize - paginationData.pageSize + 1));
+                description = description.replace("_ENTRY_LAST", String(Math.min(paginationData.page * paginationData.pageSize, data.total)));
+                description = description.replace("_ENTRY_ALL", String(data.total));
+                description = description.replace("_PAGE_CURRENT", String(paginationData.page));
+                description = description.replace("_PAGE_ALL", String(paginationData.totalPages));
+                // Render description
+                this._elements.descriptionContainer.innerHTML = description;
+            }
+        }
+        /**
+         * Internal function to get pagination data from the response.
+         *
+         * @param data
+         * @private
+         */
+        getPaginationData(data) {
+            if (data.pagination === undefined) {
+                throw new Error("[Pagination Component] Pagination data is missing. Please check your API response");
+            }
+            return data.pagination;
         }
     }
 
@@ -1896,10 +1947,10 @@
             this._client = new Client(this._config, this._eventDispatcher);
             // Register components
             this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
-            if (this._config.components?.search?.active === true) {
+            if (this._config.components?.search?.active) {
                 this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
             }
-            if (this._config.components?.pagination?.active === true) {
+            if (this._config.components?.pagination?.active) {
                 this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };
                 this._components.pagination = new PaginationComponent(footerContainerElement, this._config, this._eventDispatcher, this._client);
             }
