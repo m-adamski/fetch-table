@@ -1840,12 +1840,12 @@
             if (this._config.components.pagination.description?.active === true) {
                 const paginationData = this.getPaginationData(data);
                 let description = this._config.components.pagination.description?.innerHTML ??
-                    "Showing _ENTRY_FIRST - _ENTRY_LAST of _ENTRY_ALL entries (Page _PAGE_CURRENT of _PAGE_ALL)";
-                description = description.replace("_ENTRY_FIRST", String(paginationData.page * paginationData.pageSize - paginationData.pageSize + 1));
-                description = description.replace("_ENTRY_LAST", String(Math.min(paginationData.page * paginationData.pageSize, data.totalRecords)));
-                description = description.replace("_ENTRY_ALL", String(data.totalRecords));
-                description = description.replace("_PAGE_CURRENT", String(paginationData.page));
-                description = description.replace("_PAGE_ALL", String(paginationData.totalPages));
+                    "Showing _START_ - _END_ of _TOTAL_ entries (Page _PAGE_CURRENT_ of _PAGE_TOTAL_)";
+                description = description.replace("_START_", String(paginationData.page * paginationData.pageSize - paginationData.pageSize + 1));
+                description = description.replace("_END_", String(Math.min(paginationData.page * paginationData.pageSize, data.totalRecords)));
+                description = description.replace("_TOTAL_", String(data.totalRecords));
+                description = description.replace("_PAGE_CURRENT_", String(paginationData.page));
+                description = description.replace("_PAGE_TOTAL_", String(paginationData.totalPages));
                 // Render description
                 this._elements.descriptionContainer.innerHTML = description;
             }
