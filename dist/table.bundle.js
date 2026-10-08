@@ -1411,13 +1411,17 @@
          */
         generateRequestBody() {
             let requestBody = {};
-            if (this._search !== null) {
+            if (this._search !== null && this._search !== "") {
                 requestBody = { ...requestBody, search: this._search };
             }
             if (this._pagination !== null) {
+                // Reset current pagination page to 1 if search is not empty
                 requestBody = {
                     ...requestBody,
-                    pagination: { page: this._pagination.page, size: this._pagination.pageSize }
+                    pagination: {
+                        page: this._search !== null && this._search !== "" ? 1 : this._pagination.page,
+                        size: this._pagination.pageSize
+                    }
                 };
             }
             if (this._sort !== null) {
@@ -1442,7 +1446,8 @@
                 params.append("search", this._search);
             }
             if (this._pagination !== null) {
-                params.append("pagination[page]", this._pagination.page.toString());
+                // Reset current pagination page to 1 if search is not empty
+                params.append("pagination[page]", this._search !== null && this._search !== "" ? "1" : this._pagination.page.toString());
                 params.append("pagination[size]", this._pagination.pageSize.toString());
             }
             if (this._sort !== null) {
