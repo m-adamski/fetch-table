@@ -7,5 +7,6 @@ export default class Component implements ComponentInterface {
     protected readonly _coreElement: HTMLElement;
     protected readonly _eventDispatcher: EventDispatcher;
     protected readonly _client: Client;
+    protected _isLoading: boolean;
     constructor(coreElement: HTMLElement, config: ConfigSchema, eventDispatcher: EventDispatcher, client: Client);
 }

@@ -130,8 +130,63 @@ export const configSchema = z.object({
                 "attributes": z.optional(z.record(z.string(), z.string())),
             }))
         })),
+        "filter": z.optional(z.object({
+            "container": z.optional(z.object({
+                "className": z.optional(z.string()),
+                "attributes": z.optional(z.record(z.string(), z.string())),
+            })),
+            "filter": z.optional(z.object({
+                "container": z.optional(z.object({
+                    "className": z.optional(z.string()),
+                    "attributes": z.optional(z.record(z.string(), z.string())),
+                })),
+                "label": z.optional(z.object({
+                    "className": z.optional(z.string()),
+                    "attributes": z.optional(z.record(z.string(), z.string())),
+                })),
+                "select": z.optional(z.object({
+                    "select": z.optional(z.object({
+                        "className": z.optional(z.string()),
+                        "attributes": z.optional(z.record(z.string(), z.string())),
+                    })),
+                    "option": z.optional(z.object({
+                        "className": z.optional(z.string()),
+                        "attributes": z.optional(z.record(z.string(), z.string())),
+                    }))
+                })),
+                "button": z.optional(z.object({
+                    "container": z.optional(z.object({
+                        "className": z.optional(z.string()),
+                        "attributes": z.optional(z.record(z.string(), z.string())),
+                    })),
+                    "button": z.optional(z.object({
+                        "default": z.optional(z.object({
+                            "className": z.optional(z.string()),
+                            "attributes": z.optional(z.record(z.string(), z.string())),
+                        })),
+                        "active": z.optional(z.object({
+                            "className": z.optional(z.string()),
+                            "attributes": z.optional(z.record(z.string(), z.string())),
+                        }))
+                    })),
+                })),
+            })),
+        })),
     })),
     "components": z.object({
+        "search": z.object({
+            "active": z.boolean(),
+        }),
+        "filter": z.optional(z.object({
+            "active": z.boolean(),
+            "allLabel": z.optional(z.string()),
+            "filters": z.array(z.object({
+                "columnName": z.string(),
+                "label": z.optional(z.string()),
+                "type": z.enum(["button", "select"]),
+                "values": z.array(z.nullable(z.string())),
+            })),
+        })),
         "pagination": z.object({
             "active": z.boolean(),
             "pageSize": z.number(),
@@ -141,9 +196,6 @@ export const configSchema = z.object({
                 "active": z.boolean(),
                 "innerHTML": z.optional(z.string()),
             })),
-        }),
-        "search": z.object({
-            "active": z.boolean(),
         }),
     }),
 });

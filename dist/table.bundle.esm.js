@@ -896,6 +896,24 @@ const $ZodOptional = /*@__PURE__*/ $constructor("$ZodOptional", (inst, def) => {
         return def.innerType._zod.run(payload, ctx);
     };
 });
+const $ZodNullable = /*@__PURE__*/ $constructor("$ZodNullable", (inst, def) => {
+    $ZodType.init(inst, def);
+    defineLazy(inst._zod, "optin", () => def.innerType._zod.optin);
+    defineLazy(inst._zod, "optout", () => def.innerType._zod.optout);
+    defineLazy(inst._zod, "pattern", () => {
+        const pattern = def.innerType._zod.pattern;
+        return pattern ? new RegExp(`^(${cleanRegex(pattern.source)}|null)$`) : undefined;
+    });
+    defineLazy(inst._zod, "values", () => {
+        return def.innerType._zod.values ? new Set([...def.innerType._zod.values, null]) : undefined;
+    });
+    inst._zod.parse = (payload, ctx) => {
+        // Forward direction (decode): allow null to pass through
+        if (payload.value === null)
+            return payload;
+        return def.innerType._zod.run(payload, ctx);
+    };
+});
 const $ZodDefault = /*@__PURE__*/ $constructor("$ZodDefault", (inst, def) => {
     $ZodType.init(inst, def);
     // inst._zod.qin = "true";
@@ -1080,6 +1098,17 @@ function optional(innerType) {
         innerType: innerType,
     });
 }
+const ZodMiniNullable = /*@__PURE__*/ $constructor("ZodMiniNullable", (inst, def) => {
+    $ZodNullable.init(inst, def);
+    ZodMiniType.init(inst, def);
+});
+// @__NO_SIDE_EFFECTS__
+function nullable(innerType) {
+    return new ZodMiniNullable({
+        type: "nullable",
+        innerType: innerType,
+    });
+}
 const ZodMiniDefault = /*@__PURE__*/ $constructor("ZodMiniDefault", (inst, def) => {
     $ZodDefault.init(inst, def);
     ZodMiniType.init(inst, def);
@@ -1232,8 +1261,63 @@ const configSchema = object({
                 "attributes": optional(record(string(), string())),
             }))
         })),
+        "filter": optional(object({
+            "container": optional(object({
+                "className": optional(string()),
+                "attributes": optional(record(string(), string())),
+            })),
+            "filter": optional(object({
+                "container": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "label": optional(object({
+                    "className": optional(string()),
+                    "attributes": optional(record(string(), string())),
+                })),
+                "select": optional(object({
+                    "select": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "option": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    }))
+                })),
+                "button": optional(object({
+                    "container": optional(object({
+                        "className": optional(string()),
+                        "attributes": optional(record(string(), string())),
+                    })),
+                    "button": optional(object({
+                        "default": optional(object({
+                            "className": optional(string()),
+                            "attributes": optional(record(string(), string())),
+                        })),
+                        "active": optional(object({
+                            "className": optional(string()),
+                            "attributes": optional(record(string(), string())),
+                        }))
+                    })),
+                })),
+            })),
+        })),
     })),
     "components": object({
+        "search": object({
+            "active": boolean(),
+        }),
+        "filter": optional(object({
+            "active": boolean(),
+            "allLabel": optional(string()),
+            "filters": array(object({
+                "columnName": string(),
+                "label": optional(string()),
+                "type": _enum(["button", "select"]),
+                "values": array(nullable(string())),
+            })),
+        })),
         "pagination": object({
             "active": boolean(),
             "pageSize": number(),
@@ -1243,9 +1327,6 @@ const configSchema = object({
                 "active": boolean(),
                 "innerHTML": optional(string()),
             })),
-        }),
-        "search": object({
-            "active": boolean(),
         }),
     }),
 });
@@ -1321,7 +1402,8 @@ class Client {
     constructor(config, eventDispatcher) {
         this._sort = null;
         this._pagination = null;
-        this._search = null;
+        this._searchQuery = null;
+        this._filter = [];
         this._config = config;
         this._eventDispatcher = eventDispatcher;
     }
@@ -1370,11 +1452,39 @@ class Client {
     set pagination(value) {
         this._pagination = value;
     }
-    get search() {
-        return this._search;
+    get searchQuery() {
+        return this._searchQuery;
     }
-    set search(value) {
-        this._search = value;
+    set searchQuery(value) {
+        this._searchQuery = value;
+    }
+    get filters() {
+        return this._filter;
+    }
+    addFilter(filter, replace = false) {
+        // Check if defined column exists in the configuration
+        if (!Object.entries(this._config.columns).find(([name, column]) => name === filter.columnName)) {
+            throw new Error(`Column '${filter.columnName}' does not exist in the table configuration.`);
+        }
+        // Replace existing filter if the replacement flag is set
+        if (this._filter.find(f => f.columnName === filter.columnName)) {
+            if (replace) {
+                const index = this._filter.findIndex(f => f.columnName === filter.columnName);
+                this._filter.splice(index, 1, filter);
+            }
+            else {
+                throw new Error(`Filter for column '${filter.columnName}' already exists.`);
+            }
+        }
+        else {
+            this._filter.push(filter);
+        }
+    }
+    removeFilter(columnName) {
+        const index = this._filter.findIndex(f => f.columnName === columnName);
+        if (index !== -1) {
+            this._filter.splice(index, 1);
+        }
     }
     /**
      * Generates and returns a new Request object based on the current configuration.
@@ -1405,15 +1515,15 @@ class Client {
      */
     generateRequestBody() {
         let requestBody = {};
-        if (this._search !== null && this._search !== "") {
-            requestBody = { ...requestBody, search: this._search };
+        if (this._searchQuery !== null && this._searchQuery !== "") {
+            requestBody = { ...requestBody, search: this._searchQuery };
         }
         if (this._pagination !== null) {
             // Reset current pagination page to 1 if search is not empty
             requestBody = {
                 ...requestBody,
                 pagination: {
-                    page: this._search !== null && this._search !== "" ? 1 : this._pagination.page,
+                    page: this._searchQuery !== null && this._searchQuery !== "" ? 1 : this._pagination.page,
                     size: this._pagination.pageSize
                 }
             };
@@ -1422,6 +1532,12 @@ class Client {
             requestBody = {
                 ...requestBody,
                 sort: { column: this._sort.columnName, direction: this._sort.direction }
+            };
+        }
+        if (this._filter.length > 0) {
+            requestBody = {
+                ...requestBody,
+                filter: this._filter
             };
         }
         return requestBody;
@@ -1436,17 +1552,22 @@ class Client {
      */
     generateURLSearchParams() {
         let params = new URLSearchParams();
-        if (this._search !== null) {
-            params.append("search", this._search);
+        if (this._searchQuery !== null) {
+            params.append("search", this._searchQuery);
         }
         if (this._pagination !== null) {
             // Reset current pagination page to 1 if search is not empty
-            params.append("pagination[page]", this._search !== null && this._search !== "" ? "1" : this._pagination.page.toString());
+            params.append("pagination[page]", this._searchQuery !== null && this._searchQuery !== "" ? "1" : this._pagination.page.toString());
             params.append("pagination[size]", this._pagination.pageSize.toString());
         }
         if (this._sort !== null) {
             params.append("sort[column]", this._sort.columnName);
             params.append("sort[direction]", this._sort.direction);
+        }
+        if (this._filter.length > 0) {
+            this._filter.forEach(filter => {
+                params.append("filter", `${filter.columnName}=${filter.value}`);
+            });
         }
         return params;
     }
@@ -1454,17 +1575,20 @@ class Client {
 
 class Component {
     constructor(coreElement, config, eventDispatcher, client) {
+        this._isLoading = false;
         this._config = config;
         this._coreElement = coreElement;
         this._eventDispatcher = eventDispatcher;
         this._client = client;
+        // Register event handlers
+        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
+        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
     }
 }
 
 class TableComponent extends Component {
     constructor(coreElement, config, eventDispatcher, client) {
         super(coreElement, config, eventDispatcher, client);
-        this._isLoading = false;
         this._sort = null;
         this._elements = {
             table: null,
@@ -1472,9 +1596,7 @@ class TableComponent extends Component {
             body: null
         };
         // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
         this._eventDispatcher.register("data-fetch", (data) => this.render(data));
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
         this.init();
     }
     /**
@@ -1607,7 +1729,6 @@ class TableComponent extends Component {
 class PaginationComponent extends Component {
     constructor(coreElement, config, eventDispatcher, client) {
         super(coreElement, config, eventDispatcher, client);
-        this._isLoading = false;
         this._elements = {
             container: null,
             descriptionContainer: null,
@@ -1615,10 +1736,9 @@ class PaginationComponent extends Component {
             sizeSelect: null
         };
         // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
         this._eventDispatcher.register("data-fetch", (data) => this.renderPagination(data));
         this._eventDispatcher.register("data-fetch", (data) => this.renderDescription(data));
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
+        this._eventDispatcher.register("filter-value-change", (filter) => this.resetCurrentPage());
         this.init();
     }
     /**
@@ -1644,7 +1764,7 @@ class PaginationComponent extends Component {
             attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
         });
         const sizeSelectElement = createElement("select", {
-            name: "at-size-selector",
+            name: "ft-size-selector",
             className: this._config.elements?.pagination?.sizeSelector?.select?.className,
             attributes: this._config.elements?.pagination?.sizeSelector?.select?.attributes
         });
@@ -1653,6 +1773,8 @@ class PaginationComponent extends Component {
                 value: size,
                 innerText: size.toString(),
                 selected: size === this._client.pagination?.pageSize ? "selected" : null,
+                className: this._config.elements?.pagination?.sizeSelector?.option?.className,
+                attributes: this._config.elements?.pagination?.sizeSelector?.option?.attributes
             });
             sizeSelectElement.appendChild(optionElement);
         });
@@ -1670,6 +1792,7 @@ class PaginationComponent extends Component {
                 this._client.refresh();
             }
         });
+        this._elements.sizeContainer.innerHTML = this._config.elements?.pagination?.sizeSelector?.container?.innerHTML ?? "";
         this._elements.sizeContainer.appendChild(sizeSelectElement);
         this._coreElement.appendChild(this._elements.descriptionContainer);
         this._coreElement.appendChild(this._elements.container);
@@ -1856,15 +1979,25 @@ class PaginationComponent extends Component {
         }
         return data.pagination;
     }
+    /**
+     * Resets the current page to the first one after a filter change.
+     *
+     * @private
+     */
+    resetCurrentPage() {
+        let paginationData = this._client.pagination;
+        if (paginationData !== null) {
+            this._client.pagination = {
+                page: 1,
+                pageSize: paginationData.pageSize
+            };
+        }
+    }
 }
 
 class SearchComponent extends Component {
     constructor(coreElement, config, eventDispatcher, client) {
         super(coreElement, config, eventDispatcher, client);
-        this._isLoading = false;
-        // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
         this.init();
     }
     init() {
@@ -1890,7 +2023,7 @@ class SearchComponent extends Component {
                     // Get search query, dispatch event and refresh data
                     let searchQuery = inputElement.value;
                     this._eventDispatcher.dispatch("search-change", searchQuery);
-                    this._client.search = searchQuery;
+                    this._client.searchQuery = searchQuery;
                     this._client.refresh();
                 }, 500);
             }
@@ -1900,12 +2033,131 @@ class SearchComponent extends Component {
     }
 }
 
+class FilterComponent extends Component {
+    constructor(coreElement, config, eventDispatcher, client) {
+        super(coreElement, config, eventDispatcher, client);
+        this.init();
+    }
+    init() {
+        if (this._config.debug)
+            console.info("[Filter Component] Initializing..");
+        const containerElement = createElement("div", {
+            className: this._config.elements?.filter?.container?.className,
+            attributes: this._config.elements?.filter?.container?.attributes,
+        });
+        // Iterate over filters
+        this._config.components.filter?.filters.forEach((filter) => {
+            const filterContainerElement = createElement("div", {
+                className: this._config.elements?.filter?.filter?.container?.className,
+                attributes: this._config.elements?.filter?.filter?.container?.attributes,
+            });
+            // Create and append label
+            filterContainerElement.appendChild(createElement("span", {
+                innerHTML: filter.label ?? filter.columnName,
+                className: this._config.elements?.filter?.filter?.label?.className,
+                attributes: this._config.elements?.filter?.filter?.label?.attributes,
+            }));
+            if (filter.type === "select") {
+                const filterElement = createElement("select", {
+                    name: `ft-filter-${filter.columnName}`,
+                    className: this._config.elements?.filter?.filter?.select?.select?.className,
+                    attributes: this._config.elements?.filter?.filter?.select?.select?.attributes,
+                });
+                // Add null value if it does not exist
+                if (!filter.values.includes(null)) {
+                    filter.values.unshift(null);
+                }
+                filter.values.forEach((value) => {
+                    filterElement.appendChild(createElement("option", {
+                        value: value ? value : "ALL",
+                        innerText: value ? value : this._config.components.filter?.allLabel,
+                        className: this._config.elements?.filter?.filter?.select?.option?.className,
+                        attributes: this._config.elements?.filter?.filter?.select?.option?.attributes,
+                    }));
+                });
+                filterElement.addEventListener("change", () => {
+                    if (!this._isLoading) {
+                        if (this._config.debug)
+                            console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${filterElement.value}`);
+                        if (filterElement.value === "ALL") {
+                            this._eventDispatcher.dispatch("filter-value-change", null);
+                            this._client.removeFilter(filter.columnName);
+                        }
+                        else {
+                            const currentFilter = { columnName: filter.columnName, value: filterElement.value };
+                            this._eventDispatcher.dispatch("filter-value-change", currentFilter);
+                            this._client.addFilter(currentFilter, true);
+                            this._client.refresh();
+                        }
+                        this._client.refresh();
+                    }
+                });
+                filterContainerElement.appendChild(filterElement);
+            }
+            else {
+                const filterElement = createElement("div", {
+                    className: this._config.elements?.filter?.filter?.button?.container?.className,
+                    attributes: this._config.elements?.filter?.filter?.button?.container?.attributes,
+                });
+                // Add null value if it does not exist
+                if (!filter.values.includes(null)) {
+                    filter.values.unshift(null);
+                }
+                filter.values.forEach((value) => {
+                    const buttonElement = createElement("button", {
+                        type: "button",
+                        innerText: value ? value : this._config.components.filter?.allLabel,
+                        className: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.className : this._config.elements?.filter?.filter?.button?.button?.default?.className,
+                        attributes: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.attributes : this._config.elements?.filter?.filter?.button?.button?.default?.attributes,
+                    });
+                    // Register event listener to buttonElement
+                    buttonElement.addEventListener("click", () => {
+                        if (!this._isLoading) {
+                            if (this._config.debug)
+                                console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${value}`);
+                            // TODO: Refactor this
+                            // We need to reset active class in every button before set active state to this one
+                            const buttons = filterElement.querySelectorAll("button");
+                            buttons.forEach((button) => {
+                                button.className = this._config.elements?.filter?.filter?.button?.button?.default?.className ?? "";
+                                Object.entries(this._config.elements?.filter?.filter?.button?.button?.default?.attributes ?? {}).forEach(([key, value]) => {
+                                    button.removeAttribute(key);
+                                });
+                            });
+                            buttonElement.className = this._config.elements?.filter?.filter?.button?.button?.active?.className ?? "";
+                            Object.entries(this._config.elements?.filter?.filter?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
+                                buttonElement.setAttribute(key, value);
+                            });
+                            if (value === null) {
+                                this._eventDispatcher.dispatch("filter-value-change", null);
+                                this._client.removeFilter(filter.columnName);
+                                this._client.refresh();
+                            }
+                            else {
+                                const currentFilter = { columnName: filter.columnName, value: value };
+                                this._eventDispatcher.dispatch("filter-value-change", currentFilter);
+                                this._client.addFilter(currentFilter, true);
+                                this._client.refresh();
+                            }
+                        }
+                    });
+                    filterElement.appendChild(buttonElement);
+                });
+                filterContainerElement.appendChild(filterElement);
+            }
+            containerElement.appendChild(filterContainerElement);
+        });
+        this._coreElement.appendChild(containerElement);
+    }
+}
+
 class FetchTable {
     constructor(elementSelector, config) {
         this._components = {
             table: null,
             pagination: null,
-            search: null
+            search: null,
+            filter: null,
         };
         this._config = this.validateConfig(config);
         this._coreElement = document.querySelector(elementSelector);
@@ -1948,6 +2200,9 @@ class FetchTable {
         this._components.table = new TableComponent(containerElement, this._config, this._eventDispatcher, this._client);
         if (this._config.components?.search?.active) {
             this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
+        }
+        if (this._config.components?.filter?.active) {
+            this._components.filter = new FilterComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         }
         if (this._config.components?.pagination?.active) {
             this._client.pagination = { page: 1, pageSize: this._config.components.pagination.pageSize };

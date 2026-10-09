@@ -3,7 +3,6 @@ import { ConfigSchema } from "../schema/config";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 export default class PaginationComponent extends Component {
-    private _isLoading;
     private _elements;
     constructor(coreElement: HTMLElement, config: ConfigSchema, eventDispatcher: EventDispatcher, client: Client);
     /**
@@ -33,4 +32,10 @@ export default class PaginationComponent extends Component {
      * @private
      */
     private getPaginationData;
+    /**
+     * Resets the current page to the first one after a filter change.
+     *
+     * @private
+     */
+    private resetCurrentPage;
 }

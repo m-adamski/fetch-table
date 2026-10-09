@@ -136,8 +136,66 @@ export declare const configSchema: z.ZodMiniObject<{
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
         }, z.core.$strip>>;
+        filter: z.ZodMiniOptional<z.ZodMiniObject<{
+            container: z.ZodMiniOptional<z.ZodMiniObject<{
+                className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+            }, z.core.$strip>>;
+            filter: z.ZodMiniOptional<z.ZodMiniObject<{
+                container: z.ZodMiniOptional<z.ZodMiniObject<{
+                    className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                }, z.core.$strip>>;
+                label: z.ZodMiniOptional<z.ZodMiniObject<{
+                    className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                }, z.core.$strip>>;
+                select: z.ZodMiniOptional<z.ZodMiniObject<{
+                    select: z.ZodMiniOptional<z.ZodMiniObject<{
+                        className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                        attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                    }, z.core.$strip>>;
+                    option: z.ZodMiniOptional<z.ZodMiniObject<{
+                        className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                        attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                    }, z.core.$strip>>;
+                }, z.core.$strip>>;
+                button: z.ZodMiniOptional<z.ZodMiniObject<{
+                    container: z.ZodMiniOptional<z.ZodMiniObject<{
+                        className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                        attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                    }, z.core.$strip>>;
+                    button: z.ZodMiniOptional<z.ZodMiniObject<{
+                        default: z.ZodMiniOptional<z.ZodMiniObject<{
+                            className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                            attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                        }, z.core.$strip>>;
+                        active: z.ZodMiniOptional<z.ZodMiniObject<{
+                            className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                            attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
+                        }, z.core.$strip>>;
+                    }, z.core.$strip>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
     }, z.core.$strip>>;
     components: z.ZodMiniObject<{
+        search: z.ZodMiniObject<{
+            active: z.ZodMiniBoolean<boolean>;
+        }, z.core.$strip>;
+        filter: z.ZodMiniOptional<z.ZodMiniObject<{
+            active: z.ZodMiniBoolean<boolean>;
+            allLabel: z.ZodMiniOptional<z.ZodMiniString<string>>;
+            filters: z.ZodMiniArray<z.ZodMiniObject<{
+                columnName: z.ZodMiniString<string>;
+                label: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                type: z.ZodMiniEnum<{
+                    button: "button";
+                    select: "select";
+                }>;
+                values: z.ZodMiniArray<z.ZodMiniNullable<z.ZodMiniString<string>>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
         pagination: z.ZodMiniObject<{
             active: z.ZodMiniBoolean<boolean>;
             pageSize: z.ZodMiniNumber<number>;
@@ -150,9 +208,6 @@ export declare const configSchema: z.ZodMiniObject<{
                 active: z.ZodMiniBoolean<boolean>;
                 innerHTML: z.ZodMiniOptional<z.ZodMiniString<string>>;
             }, z.core.$strip>>;
-        }, z.core.$strip>;
-        search: z.ZodMiniObject<{
-            active: z.ZodMiniBoolean<boolean>;
         }, z.core.$strip>;
     }, z.core.$strip>;
 }, z.core.$strip>;

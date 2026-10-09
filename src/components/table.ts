@@ -7,7 +7,6 @@ import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
 export default class TableComponent extends Component {
-    private _isLoading: boolean = false;
     private _sort: Sort | null = null;
     private _elements: { table: HTMLElement | null, head: HTMLElement | null, body: HTMLElement | null } = {
         table: null,
@@ -19,9 +18,7 @@ export default class TableComponent extends Component {
         super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
         this._eventDispatcher.register("data-fetch", (data) => this.render(data));
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
 
         this.init();
     }

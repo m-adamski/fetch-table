@@ -21,6 +21,14 @@
             <div class="mt-8 flow-root">
                 <div>
 
+                    <div class="flex flex-row items-center">
+                        <span>Account Type:</span>
+                        <div class="flex flex-row">
+                            <button
+                                class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 cursor-pointer rounded-sm hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-default"></button>
+                        </div>
+                    </div>
+
                     <div class="py-2">
                         <div class="mt-2 grid grid-cols-1 max-w-md">
                             <input id="customSearch" type="text" name="customSearch" placeholder="Search.." />
@@ -41,6 +49,12 @@
                     ajaxMethod: "GET",
                     debug: true,
                     columns: {
+                        id: {
+                            type: "text",
+                            label: "ID",
+                            sortable: true,
+                            searchable: true,
+                        },
                         firstName: {
                             type: "text",
                             label: "First Name",
@@ -64,7 +78,13 @@
                             label: "Email address",
                             sortable: true,
                             searchable: true,
-                        }
+                        },
+                        department: {
+                            type: "text",
+                            label: "Department",
+                            sortable: true,
+                            searchable: true,
+                        },
                     },
                     elements: {
                         container: {
@@ -121,15 +141,16 @@
                             },
                             sizeSelector: {
                                 container: {
-                                    className: "mt-2 grid grid-cols-1"
+                                    className: "mt-2 grid grid-cols-2 items-center gap-x-2",
+                                    innerHTML: "<span>Rows per page</span>"
                                 },
                                 select: {
-                                    className: "col-start-1 row-start-1 w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
+                                    className: "w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 sm:text-sm/6"
                                 }
                             },
                             description: {
                                 container: {
-                                    className: "bg-red-500"
+                                    className: "text-sm"
                                 }
                             }
                         },
@@ -138,6 +159,23 @@
                                 className: "block w-full max-w-[200px] rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6",
                                 attributes: {
                                     placeholder: "Search..",
+                                }
+                            }
+                        },
+                        filter: {
+                            filter: {
+                                label: {
+                                    className: "text-sm"
+                                },
+                                button: {
+                                    button: {
+                                        default: {
+                                            className: "relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 cursor-pointer rounded-sm hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-default"
+                                        },
+                                        active: {
+                                            className: "relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white rounded-sm focus:z-20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                                        },
+                                    }
                                 }
                             }
                         }
@@ -150,12 +188,30 @@
                             style: "standard",
                             description: {
                                 active: true,
-                                innerHTML: "_ENTRY_FIRST - _ENTRY_LAST of _ENTRY_ALL entries"
+                                innerHTML: "_START_ - _END_ of _TOTAL_ entries (Page _PAGE_CURRENT_ of _PAGE_TOTAL_)"
                             }
                         },
                         search: {
                             active: true,
                         },
+                        filter: {
+                            active: true,
+                            allLabel: "All",
+                            filters: [
+                                {
+                                    "columnName": "type",
+                                    "label": "Account type",
+                                    "type": "select",
+                                    "values": [ "Member", "Administrator" ]
+                                },
+                                {
+                                    "columnName": "department",
+                                    "label": "Department",
+                                    "type": "button",
+                                    "values": [ "Sales", "Marketing" ]
+                                }
+                            ]
+                        }
                     }
                 });
 
@@ -165,7 +221,7 @@
                     clearTimeout(searchTimeout);
 
                     searchTimeout = setTimeout(() => {
-                        fetchTable.client.search = customSearchElement.value;
+                        fetchTable.client.searchQuery = customSearchElement.value;
                         fetchTable.refreshData();
                     }, 500);
                 });

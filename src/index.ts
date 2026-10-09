@@ -5,6 +5,7 @@ import Client from "./modules/client";
 import TableComponent from "./components/table";
 import PaginationComponent from "./components/pagination";
 import SearchComponent from "./components/search";
+import FilterComponent from "./components/filter";
 
 export default class FetchTable {
     private readonly _config: ConfigSchema;
@@ -14,11 +15,13 @@ export default class FetchTable {
     private readonly _components: {
         table: TableComponent | null,
         pagination: PaginationComponent | null,
-        search: SearchComponent | null
+        search: SearchComponent | null,
+        filter: FilterComponent | null,
     } = {
         table: null,
         pagination: null,
-        search: null
+        search: null,
+        filter: null,
     };
 
     constructor(elementSelector: string, config: ConfigSchema) {
@@ -83,6 +86,10 @@ export default class FetchTable {
 
         if (this._config.components?.search?.active) {
             this._components.search = new SearchComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
+        }
+
+        if (this._config.components?.filter?.active) {
+            this._components.filter = new FilterComponent(headerContainerElement, this._config, this._eventDispatcher, this._client);
         }
 
         if (this._config.components?.pagination?.active) {

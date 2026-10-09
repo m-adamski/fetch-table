@@ -24,8 +24,13 @@ const generateData = () => {
         const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
         const type = Math.random() > 0.1 ? "Member" : "Administrator";
         const email = `${ firstName.toLowerCase() }.${ lastName.toLowerCase() }${ i }@example.com`;
+        const department = Math.random() > 0.5 ? "Sales" : "Marketing";
 
         data.push([
+            {
+                column: "id",
+                value: String(i + 1)
+            },
             {
                 column: "firstName",
                 className: "px-3 py-4 text-sm font-medium whitespace-nowrap text-gray-900",
@@ -42,6 +47,10 @@ const generateData = () => {
             {
                 column: "emailAddress",
                 value: email
+            },
+            {
+                column: "department",
+                value: department
             }
         ]);
     }

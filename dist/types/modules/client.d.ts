@@ -1,13 +1,15 @@
 import { ConfigSchema } from "../schema/config";
 import { Sort } from "../interfaces/sort";
 import { Pagination } from "../interfaces/pagination";
+import { Filter } from "../interfaces/filter";
 import EventDispatcher from "./event-dispatcher";
 export default class Client {
     private readonly _config;
     private readonly _eventDispatcher;
     private _sort;
     private _pagination;
-    private _search;
+    private _searchQuery;
+    private _filter;
     constructor(config: ConfigSchema, eventDispatcher: EventDispatcher);
     /**
      * Refreshes data by triggering an AJAX request to the configured URL.
@@ -19,8 +21,11 @@ export default class Client {
     set sort(value: Sort | null);
     get pagination(): Pagination | null;
     set pagination(value: Pagination | null);
-    get search(): string | null;
-    set search(value: string | null);
+    get searchQuery(): string | null;
+    set searchQuery(value: string | null);
+    get filters(): Filter[];
+    addFilter(filter: Filter, replace?: boolean): void;
+    removeFilter(columnName: string): void;
     /**
      * Generates and returns a new Request object based on the current configuration.
      *

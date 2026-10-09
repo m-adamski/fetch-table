@@ -5,14 +5,8 @@ import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
 export default class SearchComponent extends Component {
-    private _isLoading: boolean = false;
-
     constructor(coreElement: HTMLElement, config: ConfigSchema, eventDispatcher: EventDispatcher, client: Client) {
         super(coreElement, config, eventDispatcher, client);
-
-        // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
 
         this.init();
     }
@@ -45,7 +39,7 @@ export default class SearchComponent extends Component {
                     let searchQuery: string = inputElement.value;
 
                     this._eventDispatcher.dispatch("search-change", searchQuery);
-                    this._client.search = searchQuery;
+                    this._client.searchQuery = searchQuery;
                     this._client.refresh();
                 }, 500);
             }

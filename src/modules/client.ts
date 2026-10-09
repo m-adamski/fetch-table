@@ -2,6 +2,7 @@ import { ConfigSchema } from "../schema/config";
 import { ResponseSchema, responseSchema } from "../schema/response";
 import { Sort } from "../interfaces/sort";
 import { Pagination } from "../interfaces/pagination";
+import { Filter } from "../interfaces/filter";
 import EventDispatcher from "./event-dispatcher";
 
 export default class Client {
@@ -10,7 +11,8 @@ export default class Client {
 
     private _sort: Sort | null = null;
     private _pagination: Pagination | null = null;
-    private _search: string | null = null;
+    private _searchQuery: string | null = null;
+    private _filter: Filter[] = [];
 
     constructor(config: ConfigSchema, eventDispatcher: EventDispatcher) {
         this._config = config;
@@ -68,12 +70,43 @@ export default class Client {
         this._pagination = value;
     }
 
-    get search(): string | null {
-        return this._search;
+    get searchQuery(): string | null {
+        return this._searchQuery;
     }
 
-    set search(value: string | null) {
-        this._search = value;
+    set searchQuery(value: string | null) {
+        this._searchQuery = value;
+    }
+
+    get filters(): Filter[] {
+        return this._filter;
+    }
+
+    addFilter(filter: Filter, replace: boolean = false) {
+
+        // Check if defined column exists in the configuration
+        if (!Object.entries(this._config.columns).find(([name, column]) => name === filter.columnName)) {
+            throw new Error(`Column '${ filter.columnName }' does not exist in the table configuration.`);
+        }
+
+        // Replace existing filter if the replacement flag is set
+        if (this._filter.find(f => f.columnName === filter.columnName)) {
+            if (replace) {
+                const index = this._filter.findIndex(f => f.columnName === filter.columnName);
+                this._filter.splice(index, 1, filter);
+            } else {
+                throw new Error(`Filter for column '${ filter.columnName }' already exists.`);
+            }
+        } else {
+            this._filter.push(filter);
+        }
+    }
+
+    removeFilter(columnName: string): void {
+        const index = this._filter.findIndex(f => f.columnName === columnName);
+        if (index !== -1) {
+            this._filter.splice(index, 1);
+        }
     }
 
     /**
@@ -108,16 +141,18 @@ export default class Client {
     private generateRequestBody(): {
         search?: string,
         pagination?: { page: number, size: number },
-        sort?: { column: string, direction: string }
+        sort?: { column: string, direction: string },
+        filter?: Filter[]
     } {
         let requestBody: {
             search?: string,
             pagination?: { page: number, size: number },
-            sort?: { column: string, direction: string }
+            sort?: { column: string, direction: string },
+            filter?: Filter[]
         } = {};
 
-        if (this._search !== null && this._search !== "") {
-            requestBody = { ...requestBody, search: this._search };
+        if (this._searchQuery !== null && this._searchQuery !== "") {
+            requestBody = { ...requestBody, search: this._searchQuery };
         }
 
         if (this._pagination !== null) {
@@ -126,7 +161,7 @@ export default class Client {
             requestBody = {
                 ...requestBody,
                 pagination: {
-                    page: this._search !== null && this._search !== "" ? 1 : this._pagination.page,
+                    page: this._searchQuery !== null && this._searchQuery !== "" ? 1 : this._pagination.page,
                     size: this._pagination.pageSize
                 }
             };
@@ -136,6 +171,13 @@ export default class Client {
             requestBody = {
                 ...requestBody,
                 sort: { column: this._sort.columnName, direction: this._sort.direction }
+            };
+        }
+
+        if (this._filter.length > 0) {
+            requestBody = {
+                ...requestBody,
+                filter: this._filter
             };
         }
 
@@ -153,20 +195,26 @@ export default class Client {
     private generateURLSearchParams(): URLSearchParams {
         let params = new URLSearchParams();
 
-        if (this._search !== null) {
-            params.append("search", this._search);
+        if (this._searchQuery !== null) {
+            params.append("search", this._searchQuery);
         }
 
         if (this._pagination !== null) {
 
             // Reset current pagination page to 1 if search is not empty
-            params.append("pagination[page]", this._search !== null && this._search !== "" ? "1" : this._pagination.page.toString());
+            params.append("pagination[page]", this._searchQuery !== null && this._searchQuery !== "" ? "1" : this._pagination.page.toString());
             params.append("pagination[size]", this._pagination.pageSize.toString());
         }
 
         if (this._sort !== null) {
             params.append("sort[column]", this._sort.columnName);
             params.append("sort[direction]", this._sort.direction);
+        }
+
+        if (this._filter.length > 0) {
+            this._filter.forEach(filter => {
+                params.append("filter", `${ filter.columnName }=${ filter.value }`);
+            });
         }
 
         return params;

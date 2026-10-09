@@ -7,7 +7,6 @@ import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
 export default class PaginationComponent extends Component {
-    private _isLoading: boolean = false;
     private _elements: {
         container: HTMLElement | null,
         descriptionContainer: HTMLElement | null,
@@ -24,10 +23,9 @@ export default class PaginationComponent extends Component {
         super(coreElement, config, eventDispatcher, client);
 
         // Register event handlers
-        this._eventDispatcher.register("before-data-fetch", () => this._isLoading = true);
         this._eventDispatcher.register("data-fetch", (data) => this.renderPagination(data));
         this._eventDispatcher.register("data-fetch", (data) => this.renderDescription(data));
-        this._eventDispatcher.register("after-data-fetch", () => this._isLoading = false);
+        this._eventDispatcher.register("filter-value-change", (filter) => this.resetCurrentPage());
 
         this.init();
     }
@@ -59,7 +57,7 @@ export default class PaginationComponent extends Component {
         });
 
         const sizeSelectElement = createElement("select", {
-            name: "at-size-selector",
+            name: "ft-size-selector",
             className: this._config.elements?.pagination?.sizeSelector?.select?.className,
             attributes: this._config.elements?.pagination?.sizeSelector?.select?.attributes
         });
@@ -69,6 +67,8 @@ export default class PaginationComponent extends Component {
                 value: size,
                 innerText: size.toString(),
                 selected: size === this._client.pagination?.pageSize ? "selected" : null,
+                className: this._config.elements?.pagination?.sizeSelector?.option?.className,
+                attributes: this._config.elements?.pagination?.sizeSelector?.option?.attributes
             });
 
             sizeSelectElement.appendChild(optionElement);
@@ -90,6 +90,7 @@ export default class PaginationComponent extends Component {
             }
         });
 
+        this._elements.sizeContainer.innerHTML = this._config.elements?.pagination?.sizeSelector?.container?.innerHTML ?? "";
         this._elements.sizeContainer.appendChild(sizeSelectElement);
         this._coreElement.appendChild(this._elements.descriptionContainer);
         this._coreElement.appendChild(this._elements.container);
@@ -302,5 +303,21 @@ export default class PaginationComponent extends Component {
         }
 
         return data.pagination;
+    }
+
+    /**
+     * Resets the current page to the first one after a filter change.
+     *
+     * @private
+     */
+    private resetCurrentPage(): void {
+        let paginationData = this._client.pagination;
+
+        if (paginationData !== null) {
+            this._client.pagination = {
+                page: 1,
+                pageSize: paginationData.pageSize
+            }
+        }
     }
 }

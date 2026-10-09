@@ -21,6 +21,11 @@ app.get("/ajax-data", (request, response) => {
     let sortDirection = requestQuery["sort-direction"];
     let paginationPage = Number(requestQuery["pagination[page]"]) || 1;
     let paginationSize = Number(requestQuery["pagination[size]"]) || 10;
+    let filter = requestQuery["filter"]; // Can be string or array
+
+    if (filter !== undefined && typeof filter === "string") {
+        filter = [ filter ];
+    }
 
     if (search !== undefined) {
         responseData = responseData.filter(item => {
@@ -60,18 +65,36 @@ app.get("/ajax-data", (request, response) => {
         });
     }
 
-    let totalFiltered = responseData.length;
+    if (filter !== undefined) {
+        // Convert ['type=Member', 'department=Sales'] into {type: 'Member', department: 'Sales'}
+        const filterObject = Object.fromEntries(
+            filter.map(currentFilter => currentFilter.split("="))
+        );
+
+        for (const [ key, value ] of Object.entries(filterObject)) {
+            responseData = responseData.filter(item => {
+                // item is now an array of objects
+                // currentItem is now an object { column: 'lastName', value: 'Baker' }
+                for (let currentItem of item) {
+                    if (currentItem["column"] === key && currentItem["value"] === value) {
+                        return true;
+                    }
+                }
+            });
+        }
+    }
+
+    let totalRecords = responseData.length;
     if (paginationPage !== undefined && paginationSize !== undefined) {
         responseData = responseData.slice((paginationPage - 1) * paginationSize, paginationPage * paginationSize);
     }
 
     response.json({
-        "totalRecords": data.length,
-        "totalFiltered": totalFiltered,
+        "totalRecords": totalRecords,
         "pagination": {
             "page": paginationPage,
             "pageSize": paginationSize,
-            "totalPages": Math.ceil(totalFiltered / paginationSize),
+            "totalPages": Math.ceil(totalRecords / paginationSize),
         },
         "data": responseData
     });
