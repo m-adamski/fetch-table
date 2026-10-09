@@ -119,7 +119,7 @@ configuration object for initializing the table.
     - Allows customizing CSS classes, attributes, and DOM bindings for generated elements.
 
 - components (object, required)
-    - Enables/controls built-in UI components (pagination, search).
+    - Enables/controls built-in UI components (pagination, search, filter).
 
 ### Column Configuration
 
@@ -178,6 +178,21 @@ elements: {
             className: "text-center py-3",
             innerHTML: "No data available"
         }
+    },
+    filter: {
+        container: {
+            className: "flex items-center gap-4 py-2"
+        },
+        filter: {
+            label: {
+                className: "text-sm font-medium text-gray-700"
+            },
+            select: {
+                select: {
+                    className: "rounded border-gray-300 text-sm"
+                }
+            }
+        }
     }
 }
 ```
@@ -186,6 +201,7 @@ All nested objects in elements accept:
 
 - className (string, optional): CSS classes to apply.
 - attributes (Record<string, string>, optional): Arbitrary attributes to set.
+- innerHTML (string, optional where present): Custom HTML content.
 - querySelector (string, optional where present): Use an existing element instead of creating one.
 
 **Structure:**
@@ -235,10 +251,13 @@ All nested objects in elements accept:
             - className, innerHTML, attributes
     - sizeSelector (object, optional)
         - container (object, optional)
-            - className, attributes
+            - className, innerHTML, attributes
         - select (object, optional)
             - className, attributes
         - option (object, optional)
+            - className, attributes
+    - description (object, optional)
+        - container (object, optional)
             - className, attributes
 
 - search (object, optional)
@@ -246,6 +265,28 @@ All nested objects in elements accept:
         - className, attributes
     - input (object, optional)
         - className, attributes
+
+- filter (object, optional)
+    - container (object, optional): Wrapper for all filters.
+        - className, attributes
+    - filter (object, optional): Individual filter styling.
+        - container (object, optional)
+            - className, attributes
+        - label (object, optional)
+            - className, attributes
+        - select (object, optional): Select filter elements.
+            - select (object, optional)
+                - className, attributes
+            - option (object, optional)
+                - className, attributes
+        - button (object, optional): Button filter elements.
+            - container (object, optional)
+                - className, attributes
+            - button (object, optional)
+                - default (object, optional)
+                    - className, attributes
+                - active (object, optional)
+                    - className, attributes
 
 ### Components Configuration
 
@@ -257,11 +298,33 @@ components: {
         active: true,
         pageSize: 20,
         availableSizes: [ 10, 20, 50, 100 ],
-        style: "standard"
+        style: "standard",
+        description: {
+            active: true,
+            innerHTML: "Showing _START_ - _END_ of _TOTAL_ entries (Page _PAGE_CURRENT_ of _PAGE_TOTAL_)"
+        }
     },
     search: {
         active: true,
     },
+    filter: {
+        active: true,
+        allLabel: "All",
+        filters: [
+            {
+                columnName: "status",
+                label: "Status",
+                type: "select",
+                values: [ "active", "inactive" ]
+            },
+            {
+                columnName: "role",
+                label: "Role",
+                type: "button",
+                values: [ "Admin", "User" ]
+            }
+        ]
+    }
 }
 ```
 
@@ -270,9 +333,27 @@ components: {
     - pageSize (number, required): Items per page when pagination is active.
     - availableSizes (number[], required): Page size options for the selector.
     - style ("standard" | "simple", required): Visual style for pagination.
+    - description (object, optional): Configure pagination info text.
+        - active (boolean, required): Enable/disable the description text.
+        - innerHTML (string, optional): Template string for the description. Default: `"Showing _START_ - _END_ of _TOTAL_ entries (Page _PAGE_CURRENT_ of _PAGE_TOTAL_)"`.
+            - Supported placeholders:
+                - `_START_`: Index of the first entry displayed on the current page.
+                - `_END_`: Index of the last entry displayed on the current page.
+                - `_TOTAL_`: Total number of records across all pages.
+                - `_PAGE_CURRENT_`: Current page number.
+                - `_PAGE_TOTAL_`: Total number of pages.
 
 - search (object, required)
     - active (boolean, required): Enable/disable the search component.
+
+- filter (object, optional)
+    - active (boolean, required): Enable/disable the filter component.
+    - allLabel (string, optional): Custom label for the reset / all filter value.
+    - filters (object[], required): Array of filter definitions.
+        - columnName (string, required): Column key associated with this filter.
+        - label (string, optional): Label displayed for the filter. If omitted, `columnName` is used.
+        - type ("button" | "select", required): Filter input type.
+        - values ((string | null)[], required): Array of filter values. If `null` is not present, it will automatically be prepended to represent the unfiltered state.
 
 ### Notes
 
