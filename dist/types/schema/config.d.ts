@@ -80,7 +80,7 @@ export declare const configSchema: z.ZodMiniObject<{
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
             button: z.ZodMiniOptional<z.ZodMiniObject<{
-                primary: z.ZodMiniOptional<z.ZodMiniObject<{
+                default: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
@@ -141,7 +141,7 @@ export declare const configSchema: z.ZodMiniObject<{
                 className: z.ZodMiniOptional<z.ZodMiniString<string>>;
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
-            filter: z.ZodMiniOptional<z.ZodMiniObject<{
+            item: z.ZodMiniOptional<z.ZodMiniObject<{
                 container: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;

@@ -1205,7 +1205,7 @@ const configSchema = object({
                 "attributes": optional(record(string(), string())),
             })),
             "button": optional(object({
-                "primary": optional(object({
+                "default": optional(object({
                     "className": optional(string()),
                     "attributes": optional(record(string(), string())),
                 })),
@@ -1266,7 +1266,7 @@ const configSchema = object({
                 "className": optional(string()),
                 "attributes": optional(record(string(), string())),
             })),
-            "filter": optional(object({
+            "item": optional(object({
                 "container": optional(object({
                     "className": optional(string()),
                     "attributes": optional(record(string(), string())),
@@ -1738,7 +1738,7 @@ class PaginationComponent extends Component {
         // Register event handlers
         this._eventDispatcher.register("data-fetch", (data) => this.renderPagination(data));
         this._eventDispatcher.register("data-fetch", (data) => this.renderDescription(data));
-        this._eventDispatcher.register("filter-value-change", (filter) => this.resetCurrentPage());
+        this._eventDispatcher.register("filter-value-change", () => this.resetCurrentPage());
         this.init();
     }
     /**
@@ -1814,7 +1814,7 @@ class PaginationComponent extends Component {
         const paginationData = this.getPaginationData(data);
         this._elements.container.innerText = "";
         const previousButtonElement = createElement("button", {
-            className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
+            className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.default?.className,
             attributes: this._config.elements?.pagination?.button?.previous?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
             disabled: paginationData.page === 1 ? "disabled" : null,
@@ -1838,7 +1838,7 @@ class PaginationComponent extends Component {
         });
         const nextButtonElement = createElement("button", {
             type: "button",
-            className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
+            className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.default?.className,
             attributes: this._config.elements?.pagination?.button?.next?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
             disabled: paginationData.page === paginationData.totalPages ? "disabled" : null
@@ -1870,7 +1870,7 @@ class PaginationComponent extends Component {
              */
             const createButtonElement = (pageNumber, isActive = false) => {
                 const buttonElement = createElement("button", {
-                    className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.primary?.className : this._config.elements?.pagination?.button?.primary?.className,
+                    className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.default?.className : this._config.elements?.pagination?.button?.default?.className,
                     attributes: this._config.elements?.pagination?.button?.active?.attributes,
                     innerText: pageNumber.toString(),
                     type: "button"
@@ -1896,7 +1896,7 @@ class PaginationComponent extends Component {
              */
             const createEllipsisElement = () => {
                 return createElement("span", {
-                    className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.primary?.className,
+                    className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.default?.className,
                     attributes: this._config.elements?.pagination?.button?.previous?.attributes,
                     innerHTML: this._config.elements?.pagination?.button?.ellipsis?.innerHTML || "..",
                 });
@@ -2048,20 +2048,20 @@ class FilterComponent extends Component {
         // Iterate over filters
         this._config.components.filter?.filters.forEach((filter) => {
             const filterContainerElement = createElement("div", {
-                className: this._config.elements?.filter?.filter?.container?.className,
-                attributes: this._config.elements?.filter?.filter?.container?.attributes,
+                className: this._config.elements?.filter?.item?.container?.className,
+                attributes: this._config.elements?.filter?.item?.container?.attributes,
             });
             // Create and append label
             filterContainerElement.appendChild(createElement("span", {
                 innerHTML: filter.label ?? filter.columnName,
-                className: this._config.elements?.filter?.filter?.label?.className,
-                attributes: this._config.elements?.filter?.filter?.label?.attributes,
+                className: this._config.elements?.filter?.item?.label?.className,
+                attributes: this._config.elements?.filter?.item?.label?.attributes,
             }));
             if (filter.type === "select") {
                 const filterElement = createElement("select", {
                     name: `ft-filter-${filter.columnName}`,
-                    className: this._config.elements?.filter?.filter?.select?.select?.className,
-                    attributes: this._config.elements?.filter?.filter?.select?.select?.attributes,
+                    className: this._config.elements?.filter?.item?.select?.select?.className,
+                    attributes: this._config.elements?.filter?.item?.select?.select?.attributes,
                 });
                 // Add null value if it does not exist
                 if (!filter.values.includes(null)) {
@@ -2071,8 +2071,8 @@ class FilterComponent extends Component {
                     filterElement.appendChild(createElement("option", {
                         value: value ? value : "ALL",
                         innerText: value ? value : this._config.components.filter?.allLabel,
-                        className: this._config.elements?.filter?.filter?.select?.option?.className,
-                        attributes: this._config.elements?.filter?.filter?.select?.option?.attributes,
+                        className: this._config.elements?.filter?.item?.select?.option?.className,
+                        attributes: this._config.elements?.filter?.item?.select?.option?.attributes,
                     }));
                 });
                 filterElement.addEventListener("change", () => {
@@ -2096,8 +2096,8 @@ class FilterComponent extends Component {
             }
             else {
                 const filterElement = createElement("div", {
-                    className: this._config.elements?.filter?.filter?.button?.container?.className,
-                    attributes: this._config.elements?.filter?.filter?.button?.container?.attributes,
+                    className: this._config.elements?.filter?.item?.button?.container?.className,
+                    attributes: this._config.elements?.filter?.item?.button?.container?.attributes,
                 });
                 // Add null value if it does not exist
                 if (!filter.values.includes(null)) {
@@ -2107,8 +2107,8 @@ class FilterComponent extends Component {
                     const buttonElement = createElement("button", {
                         type: "button",
                         innerText: value ? value : this._config.components.filter?.allLabel,
-                        className: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.className : this._config.elements?.filter?.filter?.button?.button?.default?.className,
-                        attributes: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.attributes : this._config.elements?.filter?.filter?.button?.button?.default?.attributes,
+                        className: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.className : this._config.elements?.filter?.item?.button?.button?.default?.className,
+                        attributes: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.attributes : this._config.elements?.filter?.item?.button?.button?.default?.attributes,
                     });
                     // Register event listener to buttonElement
                     buttonElement.addEventListener("click", () => {
@@ -2119,13 +2119,13 @@ class FilterComponent extends Component {
                             // We need to reset active class in every button before set active state to this one
                             const buttons = filterElement.querySelectorAll("button");
                             buttons.forEach((button) => {
-                                button.className = this._config.elements?.filter?.filter?.button?.button?.default?.className ?? "";
-                                Object.entries(this._config.elements?.filter?.filter?.button?.button?.default?.attributes ?? {}).forEach(([key, value]) => {
+                                button.className = this._config.elements?.filter?.item?.button?.button?.default?.className ?? "";
+                                Object.entries(this._config.elements?.filter?.item?.button?.button?.default?.attributes ?? {}).forEach(([key]) => {
                                     button.removeAttribute(key);
                                 });
                             });
-                            buttonElement.className = this._config.elements?.filter?.filter?.button?.button?.active?.className ?? "";
-                            Object.entries(this._config.elements?.filter?.filter?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
+                            buttonElement.className = this._config.elements?.filter?.item?.button?.button?.active?.className ?? "";
+                            Object.entries(this._config.elements?.filter?.item?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
                                 buttonElement.setAttribute(key, value);
                             });
                             if (value === null) {

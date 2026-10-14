@@ -25,7 +25,7 @@ export default class PaginationComponent extends Component {
         // Register event handlers
         this._eventDispatcher.register("data-fetch", (data) => this.renderPagination(data));
         this._eventDispatcher.register("data-fetch", (data) => this.renderDescription(data));
-        this._eventDispatcher.register("filter-value-change", (filter) => this.resetCurrentPage());
+        this._eventDispatcher.register("filter-value-change", () => this.resetCurrentPage());
 
         this.init();
     }
@@ -116,7 +116,7 @@ export default class PaginationComponent extends Component {
         this._elements.container.innerText = "";
 
         const previousButtonElement = createElement("button", {
-            className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.primary?.className,
+            className: this._config.elements?.pagination?.button?.previous?.className || this._config.elements?.pagination?.button?.default?.className,
             attributes: this._config.elements?.pagination?.button?.previous?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.previous?.innerHTML,
             disabled: paginationData.page === 1 ? "disabled" : null,
@@ -143,7 +143,7 @@ export default class PaginationComponent extends Component {
 
         const nextButtonElement = createElement("button", {
             type: "button",
-            className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.primary?.className,
+            className: this._config.elements?.pagination?.button?.next?.className || this._config.elements?.pagination?.button?.default?.className,
             attributes: this._config.elements?.pagination?.button?.next?.attributes,
             innerHTML: this._config.elements?.pagination?.button?.next?.innerHTML,
             disabled: paginationData.page === paginationData.totalPages ? "disabled" : null
@@ -180,7 +180,7 @@ export default class PaginationComponent extends Component {
              */
             const createButtonElement = (pageNumber: number, isActive: boolean = false) => {
                 const buttonElement = createElement("button", {
-                    className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.primary?.className : this._config.elements?.pagination?.button?.primary?.className,
+                    className: isActive ? this._config.elements?.pagination?.button?.active?.className || this._config.elements?.pagination?.button?.default?.className : this._config.elements?.pagination?.button?.default?.className,
                     attributes: this._config.elements?.pagination?.button?.active?.attributes,
                     innerText: pageNumber.toString(),
                     type: "button"
@@ -210,7 +210,7 @@ export default class PaginationComponent extends Component {
              */
             const createEllipsisElement = () => {
                 return createElement("span", {
-                    className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.primary?.className,
+                    className: this._config.elements?.pagination?.button?.ellipsis?.className || this._config.elements?.pagination?.button?.default?.className,
                     attributes: this._config.elements?.pagination?.button?.previous?.attributes,
                     innerHTML: this._config.elements?.pagination?.button?.ellipsis?.innerHTML || "..",
                 });

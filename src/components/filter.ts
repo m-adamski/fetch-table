@@ -23,24 +23,24 @@ export default class FilterComponent extends Component {
         // Iterate over filters
         this._config.components.filter?.filters.forEach((filter) => {
             const filterContainerElement = createElement("div", {
-                className: this._config.elements?.filter?.filter?.container?.className,
-                attributes: this._config.elements?.filter?.filter?.container?.attributes,
+                className: this._config.elements?.filter?.item?.container?.className,
+                attributes: this._config.elements?.filter?.item?.container?.attributes,
             });
 
             // Create and append label
             filterContainerElement.appendChild(
                 createElement("span", {
                     innerHTML: filter.label ?? filter.columnName,
-                    className: this._config.elements?.filter?.filter?.label?.className,
-                    attributes: this._config.elements?.filter?.filter?.label?.attributes,
+                    className: this._config.elements?.filter?.item?.label?.className,
+                    attributes: this._config.elements?.filter?.item?.label?.attributes,
                 })
             );
 
             if (filter.type === "select") {
                 const filterElement = createElement("select", {
                     name: `ft-filter-${ filter.columnName }`,
-                    className: this._config.elements?.filter?.filter?.select?.select?.className,
-                    attributes: this._config.elements?.filter?.filter?.select?.select?.attributes,
+                    className: this._config.elements?.filter?.item?.select?.select?.className,
+                    attributes: this._config.elements?.filter?.item?.select?.select?.attributes,
                 });
 
                 // Add null value if it does not exist
@@ -53,8 +53,8 @@ export default class FilterComponent extends Component {
                         createElement("option", {
                             value: value ? value : "ALL",
                             innerText: value ? value : this._config.components.filter?.allLabel,
-                            className: this._config.elements?.filter?.filter?.select?.option?.className,
-                            attributes: this._config.elements?.filter?.filter?.select?.option?.attributes,
+                            className: this._config.elements?.filter?.item?.select?.option?.className,
+                            attributes: this._config.elements?.filter?.item?.select?.option?.attributes,
                         })
                     );
                 });
@@ -81,8 +81,8 @@ export default class FilterComponent extends Component {
                 filterContainerElement.appendChild(filterElement);
             } else {
                 const filterElement = createElement("div", {
-                    className: this._config.elements?.filter?.filter?.button?.container?.className,
-                    attributes: this._config.elements?.filter?.filter?.button?.container?.attributes,
+                    className: this._config.elements?.filter?.item?.button?.container?.className,
+                    attributes: this._config.elements?.filter?.item?.button?.container?.attributes,
                 });
 
                 // Add null value if it does not exist
@@ -94,8 +94,8 @@ export default class FilterComponent extends Component {
                     const buttonElement = createElement("button", {
                         type: "button",
                         innerText: value ? value : this._config.components.filter?.allLabel,
-                        className: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.className : this._config.elements?.filter?.filter?.button?.button?.default?.className,
-                        attributes: value === null ? this._config.elements?.filter?.filter?.button?.button?.active?.attributes : this._config.elements?.filter?.filter?.button?.button?.default?.attributes,
+                        className: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.className : this._config.elements?.filter?.item?.button?.button?.default?.className,
+                        attributes: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.attributes : this._config.elements?.filter?.item?.button?.button?.default?.attributes,
                     });
 
                     // Register event listener to buttonElement
@@ -107,15 +107,15 @@ export default class FilterComponent extends Component {
                             // We need to reset active class in every button before set active state to this one
                             const buttons = filterElement.querySelectorAll("button");
                             buttons.forEach((button) => {
-                                button.className = this._config.elements?.filter?.filter?.button?.button?.default?.className ?? "";
+                                button.className = this._config.elements?.filter?.item?.button?.button?.default?.className ?? "";
 
-                                Object.entries(this._config.elements?.filter?.filter?.button?.button?.default?.attributes ?? {}).forEach(([key, value]) => {
+                                Object.entries(this._config.elements?.filter?.item?.button?.button?.default?.attributes ?? {}).forEach(([key]) => {
                                     button.removeAttribute(key);
                                 });
                             });
 
-                            buttonElement.className = this._config.elements?.filter?.filter?.button?.button?.active?.className ?? "";
-                            Object.entries(this._config.elements?.filter?.filter?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
+                            buttonElement.className = this._config.elements?.filter?.item?.button?.button?.active?.className ?? "";
+                            Object.entries(this._config.elements?.filter?.item?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
                                 buttonElement.setAttribute(key, value);
                             });
 

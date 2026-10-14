@@ -74,7 +74,7 @@ export const configSchema = z.object({
                 "attributes": z.optional(z.record(z.string(), z.string())),
             })),
             "button": z.optional(z.object({
-                "primary": z.optional(z.object({
+                "default": z.optional(z.object({
                     "className": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
                 })),
@@ -135,7 +135,7 @@ export const configSchema = z.object({
                 "className": z.optional(z.string()),
                 "attributes": z.optional(z.record(z.string(), z.string())),
             })),
-            "filter": z.optional(z.object({
+            "item": z.optional(z.object({
                 "container": z.optional(z.object({
                     "className": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
