@@ -1128,8 +1128,9 @@ const columnSchema = object({
     "type": _enum(["text", "html"]),
     "label": string(),
     "className": optional(string()),
-    "sortable": boolean(),
+    "filterable": boolean(),
     "searchable": boolean(),
+    "sortable": boolean(),
 });
 
 const configSchema = object({
@@ -1311,12 +1312,12 @@ const configSchema = object({
         "filter": optional(object({
             "active": boolean(),
             "allLabel": optional(string()),
-            "filters": array(object({
+            "filters": optional(array(object({
                 "columnName": string(),
                 "label": optional(string()),
                 "type": _enum(["button", "select"]),
                 "values": array(nullable(string())),
-            })),
+            }))),
         })),
         "pagination": object({
             "active": boolean(),
@@ -1565,9 +1566,9 @@ class Client {
             params.append("sort[direction]", this._sort.direction);
         }
         if (this._filter.length > 0) {
-            this._filter.forEach(filter => {
-                params.append("filter", `${filter.columnName}=${filter.value}`);
-            });
+            for (let i = 0; i < this._filter.length; i++) {
+                params.append(`filter[${i}]`, `${this._filter[i].columnName}=${this._filter[i].value}`);
+            }
         }
         return params;
     }
@@ -2046,107 +2047,123 @@ class FilterComponent extends Component {
             attributes: this._config.elements?.filter?.container?.attributes,
         });
         // Iterate over filters
-        this._config.components.filter?.filters.forEach((filter) => {
-            const filterContainerElement = createElement("div", {
-                className: this._config.elements?.filter?.item?.container?.className,
-                attributes: this._config.elements?.filter?.item?.container?.attributes,
-            });
-            // Create and append label
-            filterContainerElement.appendChild(createElement("span", {
-                innerHTML: filter.label ?? filter.columnName,
-                className: this._config.elements?.filter?.item?.label?.className,
-                attributes: this._config.elements?.filter?.item?.label?.attributes,
-            }));
-            if (filter.type === "select") {
-                const filterElement = createElement("select", {
-                    name: `ft-filter-${filter.columnName}`,
-                    className: this._config.elements?.filter?.item?.select?.select?.className,
-                    attributes: this._config.elements?.filter?.item?.select?.select?.attributes,
-                });
-                // Add null value if it does not exist
-                if (!filter.values.includes(null)) {
-                    filter.values.unshift(null);
-                }
-                filter.values.forEach((value) => {
-                    filterElement.appendChild(createElement("option", {
-                        value: value ? value : "ALL",
-                        innerText: value ? value : this._config.components.filter?.allLabel,
-                        className: this._config.elements?.filter?.item?.select?.option?.className,
-                        attributes: this._config.elements?.filter?.item?.select?.option?.attributes,
-                    }));
-                });
-                filterElement.addEventListener("change", () => {
-                    if (!this._isLoading) {
-                        if (this._config.debug)
-                            console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${filterElement.value}`);
-                        if (filterElement.value === "ALL") {
-                            this._eventDispatcher.dispatch("filter-value-change", null);
-                            this._client.removeFilter(filter.columnName);
+        if (this._config.components.filter?.filters !== undefined) {
+            this._config.components.filter?.filters.forEach((filter) => {
+                // Internally used function to check if a column is filterable
+                const isFilterable = (columnName) => {
+                    for (const [name, column] of Object.entries(this._config.columns)) {
+                        if (name === columnName) {
+                            return column.filterable;
                         }
-                        else {
-                            const currentFilter = { columnName: filter.columnName, value: filterElement.value };
-                            this._eventDispatcher.dispatch("filter-value-change", currentFilter);
-                            this._client.addFilter(currentFilter, true);
-                            this._client.refresh();
-                        }
-                        this._client.refresh();
                     }
-                });
-                filterContainerElement.appendChild(filterElement);
-            }
-            else {
-                const filterElement = createElement("div", {
-                    className: this._config.elements?.filter?.item?.button?.container?.className,
-                    attributes: this._config.elements?.filter?.item?.button?.container?.attributes,
-                });
-                // Add null value if it does not exist
-                if (!filter.values.includes(null)) {
-                    filter.values.unshift(null);
-                }
-                filter.values.forEach((value) => {
-                    const buttonElement = createElement("button", {
-                        type: "button",
-                        innerText: value ? value : this._config.components.filter?.allLabel,
-                        className: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.className : this._config.elements?.filter?.item?.button?.button?.default?.className,
-                        attributes: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.attributes : this._config.elements?.filter?.item?.button?.button?.default?.attributes,
+                    return false;
+                };
+                if (isFilterable(filter.columnName)) {
+                    const filterContainerElement = createElement("div", {
+                        className: this._config.elements?.filter?.item?.container?.className,
+                        attributes: this._config.elements?.filter?.item?.container?.attributes,
                     });
-                    // Register event listener to buttonElement
-                    buttonElement.addEventListener("click", () => {
-                        if (!this._isLoading) {
-                            if (this._config.debug)
-                                console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${value}`);
-                            // TODO: Refactor this
-                            // We need to reset active class in every button before set active state to this one
-                            const buttons = filterElement.querySelectorAll("button");
-                            buttons.forEach((button) => {
-                                button.className = this._config.elements?.filter?.item?.button?.button?.default?.className ?? "";
-                                Object.entries(this._config.elements?.filter?.item?.button?.button?.default?.attributes ?? {}).forEach(([key]) => {
-                                    button.removeAttribute(key);
-                                });
-                            });
-                            buttonElement.className = this._config.elements?.filter?.item?.button?.button?.active?.className ?? "";
-                            Object.entries(this._config.elements?.filter?.item?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
-                                buttonElement.setAttribute(key, value);
-                            });
-                            if (value === null) {
-                                this._eventDispatcher.dispatch("filter-value-change", null);
-                                this._client.removeFilter(filter.columnName);
-                                this._client.refresh();
-                            }
-                            else {
-                                const currentFilter = { columnName: filter.columnName, value: value };
-                                this._eventDispatcher.dispatch("filter-value-change", currentFilter);
-                                this._client.addFilter(currentFilter, true);
-                                this._client.refresh();
-                            }
+                    // Create and append label
+                    filterContainerElement.appendChild(createElement("span", {
+                        innerHTML: filter.label ?? filter.columnName,
+                        className: this._config.elements?.filter?.item?.label?.className,
+                        attributes: this._config.elements?.filter?.item?.label?.attributes,
+                    }));
+                    if (filter.type === "select") {
+                        const filterElement = createElement("select", {
+                            name: `ft-filter-${filter.columnName}`,
+                            className: this._config.elements?.filter?.item?.select?.select?.className,
+                            attributes: this._config.elements?.filter?.item?.select?.select?.attributes,
+                        });
+                        // Add null value if it does not exist
+                        if (!filter.values.includes(null)) {
+                            filter.values.unshift(null);
                         }
-                    });
-                    filterElement.appendChild(buttonElement);
-                });
-                filterContainerElement.appendChild(filterElement);
-            }
-            containerElement.appendChild(filterContainerElement);
-        });
+                        filter.values.forEach((value) => {
+                            filterElement.appendChild(createElement("option", {
+                                value: value ? value : "ALL",
+                                innerText: value ? value : this._config.components.filter?.allLabel,
+                                className: this._config.elements?.filter?.item?.select?.option?.className,
+                                attributes: this._config.elements?.filter?.item?.select?.option?.attributes,
+                            }));
+                        });
+                        filterElement.addEventListener("change", () => {
+                            if (!this._isLoading) {
+                                if (this._config.debug)
+                                    console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${filterElement.value}`);
+                                if (filterElement.value === "ALL") {
+                                    this._eventDispatcher.dispatch("filter-value-change", null);
+                                    this._client.removeFilter(filter.columnName);
+                                }
+                                else {
+                                    const currentFilter = {
+                                        columnName: filter.columnName,
+                                        value: filterElement.value
+                                    };
+                                    this._eventDispatcher.dispatch("filter-value-change", currentFilter);
+                                    this._client.addFilter(currentFilter, true);
+                                    this._client.refresh();
+                                }
+                                this._client.refresh();
+                            }
+                        });
+                        filterContainerElement.appendChild(filterElement);
+                    }
+                    else {
+                        const filterElement = createElement("div", {
+                            className: this._config.elements?.filter?.item?.button?.container?.className,
+                            attributes: this._config.elements?.filter?.item?.button?.container?.attributes,
+                        });
+                        // Add null value if it does not exist
+                        if (!filter.values.includes(null)) {
+                            filter.values.unshift(null);
+                        }
+                        filter.values.forEach((value) => {
+                            const buttonElement = createElement("button", {
+                                type: "button",
+                                innerText: value ? value : this._config.components.filter?.allLabel,
+                                className: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.className : this._config.elements?.filter?.item?.button?.button?.default?.className,
+                                attributes: value === null ? this._config.elements?.filter?.item?.button?.button?.active?.attributes : this._config.elements?.filter?.item?.button?.button?.default?.attributes,
+                            });
+                            // Register event listener to buttonElement
+                            buttonElement.addEventListener("click", () => {
+                                if (!this._isLoading) {
+                                    if (this._config.debug)
+                                        console.info(`[Filter Component] Changing filter value of column ${filter.columnName} to ${value}`);
+                                    // TODO: Refactor this
+                                    // We need to reset active class in every button before set active state to this one
+                                    const buttons = filterElement.querySelectorAll("button");
+                                    buttons.forEach((button) => {
+                                        button.className = this._config.elements?.filter?.item?.button?.button?.default?.className ?? "";
+                                        Object.entries(this._config.elements?.filter?.item?.button?.button?.default?.attributes ?? {}).forEach(([key]) => {
+                                            button.removeAttribute(key);
+                                        });
+                                    });
+                                    buttonElement.className = this._config.elements?.filter?.item?.button?.button?.active?.className ?? "";
+                                    Object.entries(this._config.elements?.filter?.item?.button?.button?.active?.attributes ?? {}).forEach(([key, value]) => {
+                                        buttonElement.setAttribute(key, value);
+                                    });
+                                    if (value === null) {
+                                        this._eventDispatcher.dispatch("filter-value-change", null);
+                                        this._client.removeFilter(filter.columnName);
+                                        this._client.refresh();
+                                    }
+                                    else {
+                                        const currentFilter = { columnName: filter.columnName, value: value };
+                                        this._eventDispatcher.dispatch("filter-value-change", currentFilter);
+                                        this._client.addFilter(currentFilter, true);
+                                        this._client.refresh();
+                                    }
+                                }
+                            });
+                            filterElement.appendChild(buttonElement);
+                        });
+                        filterContainerElement.appendChild(filterElement);
+                    }
+                    containerElement.appendChild(filterContainerElement);
+                }
+            });
+        }
         this._coreElement.appendChild(containerElement);
     }
 }

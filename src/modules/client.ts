@@ -212,9 +212,9 @@ export default class Client {
         }
 
         if (this._filter.length > 0) {
-            this._filter.forEach(filter => {
-                params.append("filter", `${ filter.columnName }=${ filter.value }`);
-            });
+            for (let i = 0; i < this._filter.length; i++) {
+                params.append(`filter[${ i }]`, `${ this._filter[i].columnName }=${ this._filter[i].value }`);
+            }
         }
 
         return params;

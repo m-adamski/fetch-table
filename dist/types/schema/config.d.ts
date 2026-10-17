@@ -14,8 +14,9 @@ export declare const configSchema: z.ZodMiniObject<{
         }>;
         label: z.ZodMiniString<string>;
         className: z.ZodMiniOptional<z.ZodMiniString<string>>;
-        sortable: z.ZodMiniBoolean<boolean>;
+        filterable: z.ZodMiniBoolean<boolean>;
         searchable: z.ZodMiniBoolean<boolean>;
+        sortable: z.ZodMiniBoolean<boolean>;
     }, z.core.$strip>>;
     elements: z.ZodMiniOptional<z.ZodMiniObject<{
         container: z.ZodMiniOptional<z.ZodMiniObject<{
@@ -186,7 +187,7 @@ export declare const configSchema: z.ZodMiniObject<{
         filter: z.ZodMiniOptional<z.ZodMiniObject<{
             active: z.ZodMiniBoolean<boolean>;
             allLabel: z.ZodMiniOptional<z.ZodMiniString<string>>;
-            filters: z.ZodMiniArray<z.ZodMiniObject<{
+            filters: z.ZodMiniOptional<z.ZodMiniArray<z.ZodMiniObject<{
                 columnName: z.ZodMiniString<string>;
                 label: z.ZodMiniOptional<z.ZodMiniString<string>>;
                 type: z.ZodMiniEnum<{
@@ -194,7 +195,7 @@ export declare const configSchema: z.ZodMiniObject<{
                     select: "select";
                 }>;
                 values: z.ZodMiniArray<z.ZodMiniNullable<z.ZodMiniString<string>>>;
-            }, z.core.$strip>>;
+            }, z.core.$strip>>>;
         }, z.core.$strip>>;
         pagination: z.ZodMiniObject<{
             active: z.ZodMiniBoolean<boolean>;

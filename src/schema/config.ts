@@ -180,12 +180,12 @@ export const configSchema = z.object({
         "filter": z.optional(z.object({
             "active": z.boolean(),
             "allLabel": z.optional(z.string()),
-            "filters": z.array(z.object({
+            "filters": z.optional(z.array(z.object({
                 "columnName": z.string(),
                 "label": z.optional(z.string()),
                 "type": z.enum(["button", "select"]),
                 "values": z.array(z.nullable(z.string())),
-            })),
+            }))),
         })),
         "pagination": z.object({
             "active": z.boolean(),
