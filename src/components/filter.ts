@@ -2,6 +2,7 @@ import Component from "./component";
 import { ConfigSchema } from "../schema/config";
 import { Filter } from "../interfaces/filter";
 import { createElement } from "../utils/create-element";
+import { selectElement } from "../utils/select-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
@@ -15,10 +16,16 @@ export default class FilterComponent extends Component {
     private init(): void {
         if (this._config.debug) console.info("[Filter Component] Initializing..");
 
-        const containerElement = createElement("div", {
-            className: this._config.elements?.filter?.container?.className,
-            attributes: this._config.elements?.filter?.container?.attributes,
-        });
+        let containerElement = selectElement(
+            this._config.elements?.filter?.container?.querySelector
+        )
+
+        if (containerElement === null) {
+            containerElement = createElement("div", {
+                className: this._config.elements?.filter?.container?.className,
+                attributes: this._config.elements?.filter?.container?.attributes,
+            });
+        }
 
         // Iterate over filters
         if (this._config.components.filter?.filters !== undefined) {

@@ -3,6 +3,7 @@ import { ConfigSchema } from "../schema/config";
 import { ResponseSchema } from "../schema/response";
 import { Pagination } from "../interfaces/pagination";
 import { createElement } from "../utils/create-element";
+import { selectElement } from "../utils/select-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
@@ -40,21 +41,39 @@ export default class PaginationComponent extends Component {
 
         this._coreElement.innerHTML = "";
 
-        this._elements.container = createElement("nav", {
-            className: this._config.elements?.pagination?.container?.className,
-            attributes: this._config.elements?.pagination?.container?.attributes,
-            ariaLabel: "Pagination"
-        });
+        this._elements.container = selectElement(
+            this._config.elements?.pagination?.container?.querySelector
+        );
 
-        this._elements.descriptionContainer = createElement("div", {
-            className: this._config.elements?.pagination?.description?.container?.className,
-            attributes: this._config.elements?.pagination?.description?.container?.attributes
-        });
+        if (this._elements.container === null) {
+            this._elements.container = createElement("nav", {
+                className: this._config.elements?.pagination?.container?.className,
+                attributes: this._config.elements?.pagination?.container?.attributes,
+                ariaLabel: "Pagination"
+            });
+        }
 
-        this._elements.sizeContainer = createElement("div", {
-            className: this._config.elements?.pagination?.sizeSelector?.container?.className,
-            attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
-        });
+        this._elements.descriptionContainer = selectElement(
+            this._config.elements?.pagination?.description?.container?.querySelector
+        );
+
+        if (this._elements.descriptionContainer === null) {
+            this._elements.descriptionContainer = createElement("div", {
+                className: this._config.elements?.pagination?.description?.container?.className,
+                attributes: this._config.elements?.pagination?.description?.container?.attributes
+            });
+        }
+
+        this._elements.sizeContainer = selectElement(
+            this._config.elements?.pagination?.sizeSelector?.container?.querySelector
+        );
+
+        if (this._elements.sizeContainer === null) {
+            this._elements.sizeContainer = createElement("div", {
+                className: this._config.elements?.pagination?.sizeSelector?.container?.className,
+                attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
+            });
+        }
 
         const sizeSelectElement = createElement("select", {
             name: "ft-size-selector",

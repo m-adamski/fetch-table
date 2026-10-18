@@ -1209,6 +1209,7 @@
             "pagination": optional(object({
                 "container": optional(object({
                     "className": optional(string()),
+                    "querySelector": optional(string()),
                     "attributes": optional(record(string(), string())),
                 })),
                 "button": optional(object({
@@ -1240,6 +1241,7 @@
                     "container": optional(object({
                         "className": optional(string()),
                         "innerHTML": optional(string()),
+                        "querySelector": optional(string()),
                         "attributes": optional(record(string(), string())),
                     })),
                     "select": optional(object({
@@ -1254,6 +1256,7 @@
                 "description": optional(object({
                     "container": optional(object({
                         "className": optional(string()),
+                        "querySelector": optional(string()),
                         "attributes": optional(record(string(), string())),
                     })),
                 })),
@@ -1261,6 +1264,7 @@
             "search": optional(object({
                 "container": optional(object({
                     "className": optional(string()),
+                    "querySelector": optional(string()),
                     "attributes": optional(record(string(), string())),
                 })),
                 "input": optional(object({
@@ -1271,6 +1275,7 @@
             "filter": optional(object({
                 "container": optional(object({
                     "className": optional(string()),
+                    "querySelector": optional(string()),
                     "attributes": optional(record(string(), string())),
                 })),
                 "item": optional(object({
@@ -1356,6 +1361,19 @@
             }
         });
         return element;
+    }
+
+    /**
+     * Selects an element from the document based on the provided query selector.
+     * Returns null if the element is not found or the query selector is empty.
+     *
+     * @param querySelector
+     */
+    function selectElement(querySelector) {
+        if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
+            return document.querySelector(querySelector);
+        }
+        return null;
     }
 
     class EventDispatcher {
@@ -1757,19 +1775,28 @@
             if (this._config.debug)
                 console.info("[Pagination Component] Initializing..");
             this._coreElement.innerHTML = "";
-            this._elements.container = createElement("nav", {
-                className: this._config.elements?.pagination?.container?.className,
-                attributes: this._config.elements?.pagination?.container?.attributes,
-                ariaLabel: "Pagination"
-            });
-            this._elements.descriptionContainer = createElement("div", {
-                className: this._config.elements?.pagination?.description?.container?.className,
-                attributes: this._config.elements?.pagination?.description?.container?.attributes
-            });
-            this._elements.sizeContainer = createElement("div", {
-                className: this._config.elements?.pagination?.sizeSelector?.container?.className,
-                attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
-            });
+            this._elements.container = selectElement(this._config.elements?.pagination?.container?.querySelector);
+            if (this._elements.container === null) {
+                this._elements.container = createElement("nav", {
+                    className: this._config.elements?.pagination?.container?.className,
+                    attributes: this._config.elements?.pagination?.container?.attributes,
+                    ariaLabel: "Pagination"
+                });
+            }
+            this._elements.descriptionContainer = selectElement(this._config.elements?.pagination?.description?.container?.querySelector);
+            if (this._elements.descriptionContainer === null) {
+                this._elements.descriptionContainer = createElement("div", {
+                    className: this._config.elements?.pagination?.description?.container?.className,
+                    attributes: this._config.elements?.pagination?.description?.container?.attributes
+                });
+            }
+            this._elements.sizeContainer = selectElement(this._config.elements?.pagination?.sizeSelector?.container?.querySelector);
+            if (this._elements.sizeContainer === null) {
+                this._elements.sizeContainer = createElement("div", {
+                    className: this._config.elements?.pagination?.sizeSelector?.container?.className,
+                    attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
+                });
+            }
             const sizeSelectElement = createElement("select", {
                 name: "ft-size-selector",
                 className: this._config.elements?.pagination?.sizeSelector?.select?.className,
@@ -2011,10 +2038,13 @@
             if (this._config.debug)
                 console.info("[Search Component] Initializing..");
             this._coreElement.innerHTML = "";
-            const containerElement = createElement("div", {
-                className: this._config.elements?.search?.container?.className,
-                attributes: this._config.elements?.search?.container?.attributes,
-            });
+            let containerElement = selectElement(this._config.elements?.search?.container?.querySelector);
+            if (containerElement === null) {
+                containerElement = createElement("div", {
+                    className: this._config.elements?.search?.container?.className,
+                    attributes: this._config.elements?.search?.container?.attributes,
+                });
+            }
             const inputElement = createElement("input", {
                 type: "text",
                 className: this._config.elements?.search?.input?.className,
@@ -2048,10 +2078,13 @@
         init() {
             if (this._config.debug)
                 console.info("[Filter Component] Initializing..");
-            const containerElement = createElement("div", {
-                className: this._config.elements?.filter?.container?.className,
-                attributes: this._config.elements?.filter?.container?.attributes,
-            });
+            let containerElement = selectElement(this._config.elements?.filter?.container?.querySelector);
+            if (containerElement === null) {
+                containerElement = createElement("div", {
+                    className: this._config.elements?.filter?.container?.className,
+                    attributes: this._config.elements?.filter?.container?.attributes,
+                });
+            }
             // Iterate over filters
             if (this._config.components.filter?.filters !== undefined) {
                 this._config.components.filter?.filters.forEach((filter) => {
@@ -2190,7 +2223,7 @@
             // Clear the core element
             this._coreElement.innerHTML = "";
             // Search for an existing header container element or create a new one
-            let headerContainerElement = this.selectElement(this._config.elements?.container?.header?.querySelector);
+            let headerContainerElement = selectElement(this._config.elements?.container?.header?.querySelector);
             if (headerContainerElement === null) {
                 headerContainerElement = createElement("div", {
                     className: this._config.elements?.container?.header?.className,
@@ -2199,7 +2232,7 @@
                 this._coreElement.appendChild(headerContainerElement);
             }
             // Search for an existing container element or create a new one
-            let containerElement = this.selectElement(this._config.elements?.container?.container?.querySelector);
+            let containerElement = selectElement(this._config.elements?.container?.container?.querySelector);
             if (containerElement === null) {
                 containerElement = createElement("div", {
                     className: this._config.elements?.container?.container?.className,
@@ -2208,7 +2241,7 @@
                 this._coreElement.appendChild(containerElement);
             }
             // Search for an existing footer container element or create a new one
-            let footerContainerElement = this.selectElement(this._config.elements?.container?.footer?.querySelector);
+            let footerContainerElement = selectElement(this._config.elements?.container?.footer?.querySelector);
             if (footerContainerElement === null) {
                 footerContainerElement = createElement("div", {
                     className: this._config.elements?.container?.footer?.className,
@@ -2278,19 +2311,6 @@
                 return configParse.data;
             }
             throw new Error(`Exception while config validation: ${configParse.error.message}`);
-        }
-        /**
-         * Selects an element from the document based on the provided query selector.
-         * Returns null if the element is not found or the query selector is empty.
-         *
-         * @param querySelector
-         * @private
-         */
-        selectElement(querySelector) {
-            if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
-                return document.querySelector(querySelector);
-            }
-            return null;
         }
     }
 

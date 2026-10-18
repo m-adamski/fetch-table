@@ -39,12 +39,4 @@ export default class FetchTable {
      * @private
      */
     private validateConfig;
-    /**
-     * Selects an element from the document based on the provided query selector.
-     * Returns null if the element is not found or the query selector is empty.
-     *
-     * @param querySelector
-     * @private
-     */
-    private selectElement;
 }

@@ -78,6 +78,7 @@ export declare const configSchema: z.ZodMiniObject<{
         pagination: z.ZodMiniOptional<z.ZodMiniObject<{
             container: z.ZodMiniOptional<z.ZodMiniObject<{
                 className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                querySelector: z.ZodMiniOptional<z.ZodMiniString<string>>;
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
             button: z.ZodMiniOptional<z.ZodMiniObject<{
@@ -109,6 +110,7 @@ export declare const configSchema: z.ZodMiniObject<{
                 container: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     innerHTML: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    querySelector: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
                 select: z.ZodMiniOptional<z.ZodMiniObject<{
@@ -123,6 +125,7 @@ export declare const configSchema: z.ZodMiniObject<{
             description: z.ZodMiniOptional<z.ZodMiniObject<{
                 container: z.ZodMiniOptional<z.ZodMiniObject<{
                     className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                    querySelector: z.ZodMiniOptional<z.ZodMiniString<string>>;
                     attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
                 }, z.core.$strip>>;
             }, z.core.$strip>>;
@@ -130,6 +133,7 @@ export declare const configSchema: z.ZodMiniObject<{
         search: z.ZodMiniOptional<z.ZodMiniObject<{
             container: z.ZodMiniOptional<z.ZodMiniObject<{
                 className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                querySelector: z.ZodMiniOptional<z.ZodMiniString<string>>;
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
             input: z.ZodMiniOptional<z.ZodMiniObject<{
@@ -140,6 +144,7 @@ export declare const configSchema: z.ZodMiniObject<{
         filter: z.ZodMiniOptional<z.ZodMiniObject<{
             container: z.ZodMiniOptional<z.ZodMiniObject<{
                 className: z.ZodMiniOptional<z.ZodMiniString<string>>;
+                querySelector: z.ZodMiniOptional<z.ZodMiniString<string>>;
                 attributes: z.ZodMiniOptional<z.ZodMiniRecord<z.ZodMiniString<string>, z.ZodMiniString<string>>>;
             }, z.core.$strip>>;
             item: z.ZodMiniOptional<z.ZodMiniObject<{

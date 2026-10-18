@@ -1,6 +1,7 @@
 import Component from "./component";
 import { ConfigSchema } from "../schema/config";
 import { createElement } from "../utils/create-element";
+import { selectElement } from "../utils/select-element";
 import EventDispatcher from "../modules/event-dispatcher";
 import Client from "../modules/client";
 
@@ -16,10 +17,16 @@ export default class SearchComponent extends Component {
 
         this._coreElement.innerHTML = "";
 
-        const containerElement = createElement("div", {
-            className: this._config.elements?.search?.container?.className,
-            attributes: this._config.elements?.search?.container?.attributes,
-        });
+        let containerElement = selectElement(
+            this._config.elements?.search?.container?.querySelector
+        )
+
+        if (containerElement === null) {
+            containerElement = createElement("div", {
+                className: this._config.elements?.search?.container?.className,
+                attributes: this._config.elements?.search?.container?.attributes,
+            });
+        }
 
         const inputElement = createElement("input", {
             type: "text",

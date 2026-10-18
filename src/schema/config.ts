@@ -71,6 +71,7 @@ export const configSchema = z.object({
         "pagination": z.optional(z.object({
             "container": z.optional(z.object({
                 "className": z.optional(z.string()),
+                "querySelector": z.optional(z.string()),
                 "attributes": z.optional(z.record(z.string(), z.string())),
             })),
             "button": z.optional(z.object({
@@ -102,6 +103,7 @@ export const configSchema = z.object({
                 "container": z.optional(z.object({
                     "className": z.optional(z.string()),
                     "innerHTML": z.optional(z.string()),
+                    "querySelector": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
                 })),
                 "select": z.optional(z.object({
@@ -116,6 +118,7 @@ export const configSchema = z.object({
             "description": z.optional(z.object({
                 "container": z.optional(z.object({
                     "className": z.optional(z.string()),
+                    "querySelector": z.optional(z.string()),
                     "attributes": z.optional(z.record(z.string(), z.string())),
                 })),
             })),
@@ -123,6 +126,7 @@ export const configSchema = z.object({
         "search": z.optional(z.object({
             "container": z.optional(z.object({
                 "className": z.optional(z.string()),
+                "querySelector": z.optional(z.string()),
                 "attributes": z.optional(z.record(z.string(), z.string())),
             })),
             "input": z.optional(z.object({
@@ -133,6 +137,7 @@ export const configSchema = z.object({
         "filter": z.optional(z.object({
             "container": z.optional(z.object({
                 "className": z.optional(z.string()),
+                "querySelector": z.optional(z.string()),
                 "attributes": z.optional(z.record(z.string(), z.string())),
             })),
             "item": z.optional(z.object({

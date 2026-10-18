@@ -1,5 +1,6 @@
 import { configSchema, ConfigSchema } from "./schema/config";
 import { createElement } from "./utils/create-element";
+import { selectElement } from "./utils/select-element";
 import EventDispatcher from "./modules/event-dispatcher";
 import Client from "./modules/client";
 import TableComponent from "./components/table";
@@ -36,7 +37,7 @@ export default class FetchTable {
         this._coreElement.innerHTML = "";
 
         // Search for an existing header container element or create a new one
-        let headerContainerElement = this.selectElement(
+        let headerContainerElement = selectElement(
             this._config.elements?.container?.header?.querySelector
         );
 
@@ -50,7 +51,7 @@ export default class FetchTable {
         }
 
         // Search for an existing container element or create a new one
-        let containerElement = this.selectElement(
+        let containerElement = selectElement(
             this._config.elements?.container?.container?.querySelector
         );
 
@@ -64,7 +65,7 @@ export default class FetchTable {
         }
 
         // Search for an existing footer container element or create a new one
-        let footerContainerElement = this.selectElement(
+        let footerContainerElement = selectElement(
             this._config.elements?.container?.footer?.querySelector
         );
 
@@ -150,20 +151,5 @@ export default class FetchTable {
         }
 
         throw new Error(`Exception while config validation: ${ configParse.error.message }`);
-    }
-
-    /**
-     * Selects an element from the document based on the provided query selector.
-     * Returns null if the element is not found or the query selector is empty.
-     *
-     * @param querySelector
-     * @private
-     */
-    private selectElement(querySelector: string | null | undefined): HTMLElement | null {
-        if (querySelector !== null && querySelector !== undefined && querySelector !== "") {
-            return document.querySelector(querySelector) as HTMLElement;
-        }
-
-        return null;
     }
 };
