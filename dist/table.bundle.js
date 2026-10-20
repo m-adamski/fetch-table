@@ -1774,7 +1774,6 @@
         init() {
             if (this._config.debug)
                 console.info("[Pagination Component] Initializing..");
-            this._coreElement.innerHTML = "";
             this._elements.container = selectElement(this._config.elements?.pagination?.container?.querySelector);
             if (this._elements.container === null) {
                 this._elements.container = createElement("nav", {
@@ -1782,6 +1781,7 @@
                     attributes: this._config.elements?.pagination?.container?.attributes,
                     ariaLabel: "Pagination"
                 });
+                this._coreElement.appendChild(this._elements.container);
             }
             this._elements.descriptionContainer = selectElement(this._config.elements?.pagination?.description?.container?.querySelector);
             if (this._elements.descriptionContainer === null) {
@@ -1789,6 +1789,7 @@
                     className: this._config.elements?.pagination?.description?.container?.className,
                     attributes: this._config.elements?.pagination?.description?.container?.attributes
                 });
+                this._coreElement.appendChild(this._elements.descriptionContainer);
             }
             this._elements.sizeContainer = selectElement(this._config.elements?.pagination?.sizeSelector?.container?.querySelector);
             if (this._elements.sizeContainer === null) {
@@ -1796,6 +1797,7 @@
                     className: this._config.elements?.pagination?.sizeSelector?.container?.className,
                     attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
                 });
+                this._coreElement.appendChild(this._elements.sizeContainer);
             }
             const sizeSelectElement = createElement("select", {
                 name: "ft-size-selector",
@@ -1828,9 +1830,6 @@
             });
             this._elements.sizeContainer.innerHTML = this._config.elements?.pagination?.sizeSelector?.container?.innerHTML ?? "";
             this._elements.sizeContainer.appendChild(sizeSelectElement);
-            this._coreElement.appendChild(this._elements.descriptionContainer);
-            this._coreElement.appendChild(this._elements.container);
-            this._coreElement.appendChild(this._elements.sizeContainer);
         }
         /**
          * Renders the pagination controls and initializes event listeners for navigating between pages.
@@ -2037,19 +2036,20 @@
         init() {
             if (this._config.debug)
                 console.info("[Search Component] Initializing..");
-            this._coreElement.innerHTML = "";
             let containerElement = selectElement(this._config.elements?.search?.container?.querySelector);
             if (containerElement === null) {
                 containerElement = createElement("div", {
                     className: this._config.elements?.search?.container?.className,
                     attributes: this._config.elements?.search?.container?.attributes,
                 });
+                this._coreElement.appendChild(containerElement);
             }
             const inputElement = createElement("input", {
                 type: "text",
                 className: this._config.elements?.search?.input?.className,
                 attributes: this._config.elements?.search?.input?.attributes,
             });
+            containerElement.appendChild(inputElement);
             let inputTimeout = null;
             inputElement.addEventListener("keyup", () => {
                 if (!this._isLoading) {
@@ -2065,8 +2065,6 @@
                     }, 500);
                 }
             });
-            containerElement.appendChild(inputElement);
-            this._coreElement.appendChild(containerElement);
         }
     }
 
@@ -2084,6 +2082,7 @@
                     className: this._config.elements?.filter?.container?.className,
                     attributes: this._config.elements?.filter?.container?.attributes,
                 });
+                this._coreElement.appendChild(containerElement);
             }
             // Iterate over filters
             if (this._config.components.filter?.filters !== undefined) {
@@ -2203,7 +2202,6 @@
                     }
                 });
             }
-            this._coreElement.appendChild(containerElement);
         }
     }
 

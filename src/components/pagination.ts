@@ -39,8 +39,6 @@ export default class PaginationComponent extends Component {
     private init(): void {
         if (this._config.debug) console.info("[Pagination Component] Initializing..");
 
-        this._coreElement.innerHTML = "";
-
         this._elements.container = selectElement(
             this._config.elements?.pagination?.container?.querySelector
         );
@@ -51,6 +49,8 @@ export default class PaginationComponent extends Component {
                 attributes: this._config.elements?.pagination?.container?.attributes,
                 ariaLabel: "Pagination"
             });
+
+            this._coreElement.appendChild(this._elements.container);
         }
 
         this._elements.descriptionContainer = selectElement(
@@ -62,6 +62,8 @@ export default class PaginationComponent extends Component {
                 className: this._config.elements?.pagination?.description?.container?.className,
                 attributes: this._config.elements?.pagination?.description?.container?.attributes
             });
+
+            this._coreElement.appendChild(this._elements.descriptionContainer);
         }
 
         this._elements.sizeContainer = selectElement(
@@ -73,6 +75,8 @@ export default class PaginationComponent extends Component {
                 className: this._config.elements?.pagination?.sizeSelector?.container?.className,
                 attributes: this._config.elements?.pagination?.sizeSelector?.container?.attributes
             });
+
+            this._coreElement.appendChild(this._elements.sizeContainer);
         }
 
         const sizeSelectElement = createElement("select", {
@@ -111,9 +115,6 @@ export default class PaginationComponent extends Component {
 
         this._elements.sizeContainer.innerHTML = this._config.elements?.pagination?.sizeSelector?.container?.innerHTML ?? "";
         this._elements.sizeContainer.appendChild(sizeSelectElement);
-        this._coreElement.appendChild(this._elements.descriptionContainer);
-        this._coreElement.appendChild(this._elements.container);
-        this._coreElement.appendChild(this._elements.sizeContainer);
     }
 
     /**

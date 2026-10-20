@@ -25,6 +25,8 @@ export default class FilterComponent extends Component {
                 className: this._config.elements?.filter?.container?.className,
                 attributes: this._config.elements?.filter?.container?.attributes,
             });
+
+            this._coreElement.appendChild(containerElement);
         }
 
         // Iterate over filters
@@ -167,7 +169,5 @@ export default class FilterComponent extends Component {
                 }
             });
         }
-
-        this._coreElement.appendChild(containerElement);
     }
 }

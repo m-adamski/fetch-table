@@ -15,8 +15,6 @@ export default class SearchComponent extends Component {
     private init(): void {
         if (this._config.debug) console.info("[Search Component] Initializing..");
 
-        this._coreElement.innerHTML = "";
-
         let containerElement = selectElement(
             this._config.elements?.search?.container?.querySelector
         )
@@ -26,6 +24,8 @@ export default class SearchComponent extends Component {
                 className: this._config.elements?.search?.container?.className,
                 attributes: this._config.elements?.search?.container?.attributes,
             });
+
+            this._coreElement.appendChild(containerElement);
         }
 
         const inputElement = createElement("input", {
@@ -33,6 +33,8 @@ export default class SearchComponent extends Component {
             className: this._config.elements?.search?.input?.className,
             attributes: this._config.elements?.search?.input?.attributes,
         });
+
+        containerElement.appendChild(inputElement);
 
         let inputTimeout: any = null;
         inputElement.addEventListener("keyup", () => {
@@ -51,8 +53,5 @@ export default class SearchComponent extends Component {
                 }, 500);
             }
         });
-
-        containerElement.appendChild(inputElement);
-        this._coreElement.appendChild(containerElement);
     }
 }
